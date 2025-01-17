@@ -322,7 +322,7 @@ def main():
                         if left_branch == "CSC":
                             hybrid_P_scaled[i] = interp_P(mu_val)
                             hybrid_e_scaled[i] = interp_e(mu_val)
-                            hybrid_phase[i] = int(interp_phase(mu_val))
+                            hybrid_phase[i] = round(interp_phase(mu_val))
                         else:
                             hybrid_P_scaled[i] = interp_p_h(mu_val)
                             hybrid_e_scaled[i] = interp_e_h(mu_val)
@@ -331,7 +331,7 @@ def main():
                         if right_branch == "CSC":
                             hybrid_P_scaled[i] = interp_P(mu_val)
                             hybrid_e_scaled[i] = interp_e(mu_val)
-                            hybrid_phase[i] = int(interp_phase(mu_val))
+                            hybrid_phase[i] = round(interp_phase(mu_val))
                         else:
                             hybrid_P_scaled[i] = interp_p_h(mu_val)
                             hybrid_e_scaled[i] = interp_e_h(mu_val)
