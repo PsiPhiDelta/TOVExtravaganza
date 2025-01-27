@@ -15,16 +15,16 @@ hbar = 1.054571817e-34   # Reduced Planck constant in J*s
 # oh boy oh boy, let's do this carefully
 ###############################################################################
 
-# 1) hbarcMeVfm = hbar * c0 / qe / (1.0e6 * 1.0e-15)
+# 1) hbarcMeVfm = hbar * c0 / qe / (1.0e6 * 1.0e-15) ~ 197.327
 hbarcMeVfm = hbar * c0 / qe / (1.0e6 * 1.0e-15)
 
-# 2) cMeVfm3km2 = G * qe / (c0**4) * 1.0e57
+# 2) cMeVfm3km2 = G * qe / (c0**4) * 1.0e57 ~ 1.32379*10^-6
 cMeVfm3km2 = G * qe / (c0**4) * 1.0e57
 
 # 3) cMeVfm3dynecm2 = 1.6021766208e33
 cMeVfm3dynecm2 = 1.6021766208e33
 
-# 4) cMeVfm3gcm3 = from your references ~ 1.7826619069e12
+# 4) cMeVfm3gcm3 = 1.7826619069e12
 cMeVfm3gcm3 = 1.7826619069e12
 
 ###############################################################################
