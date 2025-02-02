@@ -119,3 +119,9 @@ venv.bak/
 ### Mac OS ###
 .DS_Store
 /.idea/
+
+
+
+*.txt
+*.png
+*.dat

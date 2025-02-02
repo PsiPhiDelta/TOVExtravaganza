@@ -39,7 +39,7 @@ cMeVfm3gcm3 = 1.7826619069e12
 
 factor_MeVneg4 = cMeVfm3km2 / (hbarcMeVfm**3)   # MeV^-4 => ~1.722898e-13
 factor_MeVfm3  = 1.323790e-06                  # MeV*fm^-3 => ~1.323790e-06
-factor_fmneg4  = 9.999999e-11                  # fm^-4 => 'TODO'
+factor_fmneg4  = 1.323790e-06*(hbarcMeVfm)  # fm^-4 => 'TODO'
 pFactor_CGS    = cMeVfm3km2 / cMeVfm3dynecm2    # ~8.262445e-40
 eFactor_CGS    = cMeVfm3km2 / cMeVfm3gcm3       # ~7.425915e-19
 
