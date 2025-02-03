@@ -50,7 +50,7 @@ if "FB_stars.csv" in os.listdir('.'):
             fb_data['M'] /= 1.0  
 
             # (2) NEW: Filter out any rows where M < 1.1 Msun
-            fb_data = fb_data[fb_data['M'] >= 1.2].copy()
+            fb_data = fb_data[fb_data['M'] >= 0.69].copy()
             fb_data.reset_index(drop=True, inplace=True)
 
             # If no data remains after filtering, skip plotting
@@ -145,6 +145,7 @@ for file in csv_files:
 plt.xlabel(r"$R\ [\mathrm{km}]$")
 plt.ylabel(r"$M\ [M_{\odot}]$")
 plt.xlim(0, 20)
+plt.ylim(0,1)
 plt.grid(True)
 
 # --- Create a single legend ---
