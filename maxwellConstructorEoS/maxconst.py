@@ -262,7 +262,7 @@ def main():
         ax2.set_ylabel("$P$ [MeV/fm$^3$]")
         ax2.set_xscale('log')
         ax2.set_yscale('log')
-        ax2.set_xlim(100,1500)
+        ax2.set_xlim(100,3000)
         ax2.set_ylim(bottom=1)
         ax2.legend()
         ax2.grid(True)
@@ -314,7 +314,7 @@ def main():
                         hybrid_P_scaled[i] = interp_p_h(mu_val)
                         hybrid_e_scaled[i] = interp_e_h(mu_val)
 
-            hybrid_P_scaled = np.clip(hybrid_P_scaled, 0.1, None)
+            # hybrid_P_scaled = np.clip(hybrid_P_scaled, 0.1, None)
             hybrid_P = hybrid_P_scaled * scale_factor
             hybrid_e = hybrid_e_scaled * scale_factor
             hybrid_muB = hybrid_mu * 3
