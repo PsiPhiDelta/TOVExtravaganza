@@ -37,7 +37,7 @@ cMeVfm3gcm3 = 1.7826619069e12
 #     eFactor = cMeVfm3km2/cMeVfm3gcm3    ~7.425915e-19
 ###############################################################################
 
-factor_MeVneg4 = cMeVfm3km2 / (hbarcMeVfm**3)   # MeV^-4 => ~1.722898e-13
+factor_MeV4 = cMeVfm3km2 / (hbarcMeVfm**3)   # MeV^4 => ~1.722898e-13
 factor_MeVfm3  = 1.323790e-06                  # MeV*fm^-3 => ~1.323790e-06
 factor_fmneg4  = 1.323790e-06*(hbarcMeVfm)  # fm^-4 => 'TODO'
 pFactor_CGS    = cMeVfm3km2 / cMeVfm3dynecm2    # ~8.262445e-40
@@ -53,7 +53,7 @@ def print_factors():
     oh boy oh boy, let's do it!
     """
     print("\n** Checking our derived factor expressions => TOV code units **\n")
-    print(f"(1) MeV^-4 => factor ~ {factor_MeVneg4:.6e} ( ~1.722898e-13 )")
+    print(f"(1) MeV^-4 => factor ~ {factor_MeV4:.6e} ( ~1.722898e-13 )")
     print(f"(2) MeV*fm^-3 => factor ~ {factor_MeVfm3:.6e} ( ~1.323790e-06 )")
     print(f"(3) fm^-4 => 'TODO' => factor ~ {factor_fmneg4:.6e} ( placeholder )")
 
@@ -212,7 +212,7 @@ def main():
     # Let user choose the system => code units
     print("\nWe have 5 options for input system => final TOV code units:")
     print("  0) Already code units => factor=1")
-    print("  1) MeV^-4 => cMeVfm3km2/(hbarc^3) ~ 1.722898e-13")
+    print("  1) MeV^4 => cMeVfm3km2/(hbarc^3) ~ 1.722898e-13")
     print("  2) MeV*fm^-3 => cMeVfm3km2 ~ 1.323790e-06")
     print("  3) fm^-4 => 'TODO' => ( I am lazy )")
     print("  4) CGS => separate pFactor/eFactor => ~8.262445e-40 & ~7.425915e-19")
@@ -227,9 +227,9 @@ def main():
         eFactor_out = 1.0
         system_desc = "Already code => factor=1"
     elif choice == "1":
-        pFactor_out = factor_MeVneg4
-        eFactor_out = factor_MeVneg4
-        system_desc = "MeV^-4 => code"
+        pFactor_out = factor_MeV4
+        eFactor_out = factor_MeV4
+        system_desc = "MeV^4 => code"
     elif choice == "2":
         pFactor_out = factor_MeVfm3
         eFactor_out = factor_MeVfm3

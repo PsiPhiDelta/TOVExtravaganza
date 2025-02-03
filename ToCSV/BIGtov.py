@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 ###############################################################################
 # USER SETTINGS
 ###############################################################################
-RMAX = 50.0                       # Maximum radius for TOV
+RMAX = 45.0                       # Maximum radius for TOV
 DR = 0.001                        # Radial step
-NUM_STARS = 50                    # Number of central pressures to sample
+NUM_STARS = 100                    # Number of central pressures to sample
 
 ###############################################################################
 # 1) Read an EOS CSV with multiple columns.
@@ -230,6 +230,7 @@ def process_eos_file(infile, out_folder="MR"):
     plt.title(f"M(R) from {base_name}")
     plt.grid(True)
     plt.legend()
+    plt.xlim(10,25)
     plt.savefig(out_pdf)
     plt.close()  # close the figure so we don't show it for each file
 
