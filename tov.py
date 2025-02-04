@@ -23,10 +23,10 @@ import matplotlib.pyplot as plt
 ###############################################################################
 # USER SETTINGS
 ###############################################################################
-FILENAME = "./inputCode/hsdd2.csv"  # EOS file in TOV code units
-RMAX = 50.0                       # Maximum radius for TOV
+FILENAME = "./inputCode/test.csv"  # EOS file in TOV code units
+RMAX = 100.0                       # Maximum radius for TOV
 DR = 0.001                        # Radial step
-NUM_STARS = 50                    # Number of central pressures to sample
+NUM_STARS = 500                    # Number of central pressures to sample
 
 ###############################################################################
 # 1) Read an EOS CSV with multiple columns.

@@ -45,6 +45,8 @@ def main():
         p_col = int(input("  Enter the column number for P (pressure) [1-indexed]: ")) - 1
         e_col = int(input("  Enter the column number for \\(\\epsilon\\) (energy density) [1-indexed]: ")) - 1
         mu_col = int(input("  Enter the column number for \\(\\mu\\) (chemical potential) [1-indexed]: ")) - 1
+        # New: Ask for phase index column
+        phase_col = int(input("  Enter the column number for phase index [1-indexed]: ")) - 1
     except ValueError:
         print("Invalid input for inputCSC columns. Please enter valid integer values.")
         return
@@ -129,7 +131,7 @@ def main():
             continue
 
         ncols = df.shape[1]
-        if p_col >= ncols or e_col >= ncols or mu_col >= ncols:
+        if p_col >= ncols or e_col >= ncols or mu_col >= ncols or phase_col >= ncols:
             print(f"Error: One or more specified column numbers are out-of-bounds for file {file}.")
             continue
 
@@ -138,6 +140,8 @@ def main():
             P_raw = df.iloc[:, p_col].values
             e_raw = df.iloc[:, e_col].values
             mu_raw = df.iloc[:, mu_col].values
+            # New: Extract phase index column.
+            phase_raw = df.iloc[:, phase_col].values
         except Exception as ex:
             print(f"Error extracting columns from {file}: {ex}")
             continue
@@ -151,11 +155,14 @@ def main():
         mu_sorted = mu_raw[sort_idx]
         P_sorted = P_scaled[sort_idx]
         e_sorted = e_scaled[sort_idx]
+        phase_sorted = phase_raw[sort_idx]  # sorted phase index
 
         # Create interpolation functions for inputCSC data.
         try:
             interp_P = interp1d(mu_sorted, P_sorted, kind='linear', fill_value="extrapolate")
             interp_e = interp1d(mu_sorted, e_sorted, kind='linear', fill_value="extrapolate")
+            # New: Create an interpolation for phase index using nearest-neighbor.
+            interp_phase = interp1d(mu_sorted, phase_sorted, kind='nearest', fill_value="extrapolate")
         except Exception as ex:
             print(f"Error during interpolation for {file}: {ex}")
             continue
@@ -163,6 +170,7 @@ def main():
         mu_dense = np.linspace(np.min(mu_sorted), np.max(mu_sorted), 500)
         P_interp = interp_P(mu_dense)
         e_interp = interp_e(mu_dense)
+        phase_interp = interp_phase(mu_dense)  # interpolated phase index
 
         # Clip pressure values below 0.1.
         P_interp_clipped = np.clip(P_interp, 0.1, None)
@@ -243,9 +251,12 @@ def main():
             ax1.plot(mu_h_dense, p_h_interp_clipped, color="gray", linewidth=3,
                      linestyle="--", label="FB", zorder=3)
             if valid_intersection:
-                # Show density in the legend (in units of n_sat = 0.16 fm^{-3}).
+                # Here we show both the quark chemical potential (mu_q) and the corresponding
+                # baryonic chemical potential (mu_B = 3*mu_q) in the legend.
                 ax1.plot(mu_int, P_int, 'ro', markersize=10,
-                         label=f"$n$ = {n_int/n_sat:.2f} $n_0$", zorder=4)
+                         label=f"$n$ = {n_int/n_sat:.2f} $n_0$, "
+                               f"$\\mu_q$ = {mu_int:.0f} MeV, $\\mu_B$ = {mu_int*3:.0f} MeV",
+                         zorder=4)
 
         ax1.set_xlabel("$\\mu_q$ [MeV]")
         ax1.set_ylabel("$P$ [MeV/fm$^3$]")
@@ -285,65 +296,78 @@ def main():
             print(f"  Left branch (near mu = {mu_left_test:.4f}): {left_branch}")
             print(f"  Right branch (near mu = {mu_right_test:.4f}): {right_branch}")
 
-            if left_branch == "CSC":
-                branch_left_min = np.min(mu_sorted)
-            else:
-                branch_left_min = np.min(mu_h_sorted)
-            if right_branch == "CSC":
-                branch_right_max = np.max(mu_sorted)
-            else:
-                branch_right_max = np.max(mu_h_sorted)
+            # Only accept the matching if the left branch is hadronic (H) and the right branch is CSC.
+            if left_branch != "H" or right_branch != "CSC":
+                print("  --> Intersection rejected: left branch must be hadronic (H) and right branch must be CSC.")
+                valid_intersection = False
 
-            hybrid_mu = np.linspace(branch_left_min, branch_right_max, N_points)
-            hybrid_P_scaled = np.empty_like(hybrid_mu)
-            hybrid_e_scaled = np.empty_like(hybrid_mu)
-
-            for i, mu_val in enumerate(hybrid_mu):
-                if mu_val < mu_int:
-                    if left_branch == "CSC":
-                        hybrid_P_scaled[i] = interp_P(mu_val)
-                        hybrid_e_scaled[i] = interp_e(mu_val)
-                    else:
-                        hybrid_P_scaled[i] = interp_p_h(mu_val)
-                        hybrid_e_scaled[i] = interp_e_h(mu_val)
+            if valid_intersection:
+                if left_branch == "CSC":
+                    branch_left_min = np.min(mu_sorted)
                 else:
-                    if right_branch == "CSC":
-                        hybrid_P_scaled[i] = interp_P(mu_val)
-                        hybrid_e_scaled[i] = interp_e(mu_val)
+                    branch_left_min = np.min(mu_h_sorted)
+                if right_branch == "CSC":
+                    branch_right_max = np.max(mu_sorted)
+                else:
+                    branch_right_max = np.max(mu_h_sorted)
+
+                hybrid_mu = np.linspace(branch_left_min, branch_right_max, N_points)
+                hybrid_P_scaled = np.empty_like(hybrid_mu)
+                hybrid_e_scaled = np.empty_like(hybrid_mu)
+                # New: Create an array for the phase index.
+                hybrid_phase = np.empty_like(hybrid_mu, dtype=int)
+
+                for i, mu_val in enumerate(hybrid_mu):
+                    if mu_val < mu_int:
+                        if left_branch == "CSC":
+                            hybrid_P_scaled[i] = interp_P(mu_val)
+                            hybrid_e_scaled[i] = interp_e(mu_val)
+                            hybrid_phase[i] = int(interp_phase(mu_val))
+                        else:
+                            hybrid_P_scaled[i] = interp_p_h(mu_val)
+                            hybrid_e_scaled[i] = interp_e_h(mu_val)
+                            hybrid_phase[i] = 0  # Hadronic branch gets phase index 0.
                     else:
-                        hybrid_P_scaled[i] = interp_p_h(mu_val)
-                        hybrid_e_scaled[i] = interp_e_h(mu_val)
+                        if right_branch == "CSC":
+                            hybrid_P_scaled[i] = interp_P(mu_val)
+                            hybrid_e_scaled[i] = interp_e(mu_val)
+                            hybrid_phase[i] = int(interp_phase(mu_val))
+                        else:
+                            hybrid_P_scaled[i] = interp_p_h(mu_val)
+                            hybrid_e_scaled[i] = interp_e_h(mu_val)
+                            hybrid_phase[i] = 0  # Hadronic branch gets phase index 0.
 
-            # hybrid_P_scaled = np.clip(hybrid_P_scaled, 0.1, None)
-            hybrid_P = hybrid_P_scaled * scale_factor
-            hybrid_e = hybrid_e_scaled * scale_factor
-            hybrid_muB = hybrid_mu * 3
+                hybrid_P = hybrid_P_scaled * scale_factor
+                hybrid_e = hybrid_e_scaled * scale_factor
+                hybrid_muB = hybrid_mu * 3
 
-            df_hybrid = pd.DataFrame({
-                "pressure": hybrid_P,
-                "epsilon": hybrid_e,
-                "muB": hybrid_muB
-            })
-            hybrid_filename = os.path.join(hybrid_folder, eos_name + "_hybrid.csv")
-            df_hybrid.to_csv(hybrid_filename, index=False)
-            print(f"Hybrid EoS saved as: {hybrid_filename}")
-            master_list.append({"eos": eos_name, "file": hybrid_filename})
+                # Include the hybrid phase index in the output DataFrame.
+                df_hybrid = pd.DataFrame({
+                    "pressure": hybrid_P,
+                    "epsilon": hybrid_e,
+                    "muB": hybrid_muB,
+                    "phase_index": hybrid_phase
+                })
+                hybrid_filename = os.path.join(hybrid_folder, eos_name + "_hybrid.csv")
+                df_hybrid.to_csv(hybrid_filename, index=False)
+                print(f"Hybrid EoS saved as: {hybrid_filename}")
+                master_list.append({"eos": eos_name, "file": hybrid_filename})
 
-            try:
-                hybrid_mu_loaded = hybrid_muB / 3.0
-                hybrid_P_loaded = hybrid_P_scaled
-                hybrid_e_loaded = hybrid_e_scaled
+                try:
+                    hybrid_mu_loaded = hybrid_muB / 3.0
+                    hybrid_P_loaded = hybrid_P_scaled
+                    hybrid_e_loaded = hybrid_e_scaled
 
-                ax1.plot(hybrid_mu_loaded, hybrid_P_loaded, color="red", linewidth=1.5,
-                         alpha=0.8, zorder=5, label="Hybrid")
-                ax2.plot(hybrid_e_loaded, hybrid_P_loaded, color="red", linewidth=1.5,
-                         alpha=0.8, zorder=5, label="Hybrid")
-                print(f"Hybrid branch plotted for {eos_name}")
-            except Exception as ex:
-                print(f"Error plotting hybrid data: {ex}")
+                    ax1.plot(hybrid_mu_loaded, hybrid_P_loaded, color="red", linewidth=1.5,
+                             alpha=0.8, zorder=5, label="Hybrid")
+                    ax2.plot(hybrid_e_loaded, hybrid_P_loaded, color="red", linewidth=1.5,
+                             alpha=0.8, zorder=5, label="Hybrid")
+                    print(f"Hybrid branch plotted for {eos_name}")
+                except Exception as ex:
+                    print(f"Error plotting hybrid data: {ex}")
 
-            ax1.legend()
-            ax2.legend()
+                ax1.legend()
+                ax2.legend()
 
         plot_filename = os.path.join(hybrid_folder, eos_name + ".pdf")
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
