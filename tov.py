@@ -20,6 +20,8 @@ import matplotlib.pyplot as plt
 # But seriously, we’re not using them here, because you told us
 # your file is *already* in those sweet dimensionless code units.
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Use this constant to convert from code units to solar masses:
+Msun_in_code = 1.4766  # 1 Msun = 1.4766 (G=c=1) length units
 ###############################################################################
 # USER SETTINGS
 ###############################################################################
@@ -248,6 +250,8 @@ def main():
         for p_c in p_c_values:
             # Solve TOV
             R, M = solve_tov(p_c, eos)
+            # Convert M from code units to solar masses:
+            M = M / Msun_in_code
             R_list.append(R)
             M_list.append(M)
 
