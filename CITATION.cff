@@ -5,8 +5,8 @@ authors:
     given-names: Hosein
 title: "TOVExtravaganza: Python toolkit for solving the Tolman-Oppenheimer-Volkoff (TOV) equations and exploring neutron star properties"
 license: MIT
-url: "https://github.com/PsiPhiDelta/TOVExtravaganz"
-repository-code: "https://github.com/PsiPhiDelta/TOVExtravaganz"
+url: "https://github.com/PsiPhiDelta/TOVExtravaganza"
+repository-code: "https://github.com/PsiPhiDelta/TOVExtravaganza"
 version: 1.0.0
 identifiers:
   - type: arXiv
