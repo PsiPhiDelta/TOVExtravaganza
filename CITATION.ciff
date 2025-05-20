@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "https://github.com/PsiPhiDelta/TOVExtravaganza"
+authors:
+  - family-names: Gholami
+    given-names: Hosein
+title: "TOVExtravaganza: Python toolkit for solving the Tolman-Oppenheimer-Volkoff (TOV) equations and exploring neutron star properties"
+license: MIT
+url: "https://github.com/PsiPhiDelta/TOVExtravaganz"
+repository-code: "https://github.com/PsiPhiDelta/TOVExtravaganz"
+version: 1.0.0
+identifiers:
+  - type: arXiv
+    value: "2411.04064"
+date-released: 2025-01-07
