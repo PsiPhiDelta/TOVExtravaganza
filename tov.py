@@ -273,7 +273,7 @@ def main():
     plt.figure()
     plt.plot(R_list, M_list, "o-", label="TOV solutions")
     plt.xlabel("R (code units)")
-    plt.ylabel("M (code units)")
+    plt.ylabel("M (solar masses)")
     plt.title(f"M(R) from {base_name}")
     plt.grid(True)
     plt.legend()
