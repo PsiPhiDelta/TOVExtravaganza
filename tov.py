@@ -1,6 +1,7 @@
 import os
 import csv
 import numpy as np
+import warnings
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 # --------------------------------------------------------------------
@@ -159,7 +160,10 @@ def tov_equations(y, r, eos_multi):
     dMdr = 4.0 * np.pi * r*r * e_val
 
     denom = r*(r - 2.0*M)
-    if abs(denom) < 1e-30:
+    # Use relative tolerance based on floating point precision
+    # Check if denominator is too small relative to r^2 (which is the dominant term at small r)
+    eps = np.finfo(float).eps
+    if abs(denom) < eps * max(r*r, abs(r*M)):
         dPdr = 0.0
     else:
         dPdr = - ( (e_val + p)*( M + 4.0*np.pi*r**3 * p ) ) / denom
@@ -173,7 +177,19 @@ def solve_tov(central_p, eos_multi, r_max=RMAX, dr=DR):
     """
     r_vals = np.arange(0.0, r_max+dr, dr)
     y0 = [0.0, central_p]
-    sol = odeint(tov_equations, y0, r_vals, args=(eos_multi,))
+    
+    # Catch integration warnings and errors
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        try:
+            sol = odeint(tov_equations, y0, r_vals, args=(eos_multi,))
+            if w:
+                for warning in w:
+                    print(f"  ODE Integration Warning (p_c={central_p:.3e}): {warning.message}")
+        except Exception as e:
+            print(f"  ERROR: ODE integration failed for p_c={central_p:.3e}: {e}")
+            raise
+    
     M_sol = sol[:,0]
     p_sol = sol[:,1]
 
@@ -195,7 +211,19 @@ def solve_tov_rad(central_p, eos_multi, r_max=RMAX, dr=DR):
     """
     r_vals = np.arange(0.0, r_max+dr, dr)
     y0 = [0.0, central_p]
-    sol = odeint(tov_equations, y0, r_vals, args=(eos_multi,))
+    
+    # Catch integration warnings and errors
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        try:
+            sol = odeint(tov_equations, y0, r_vals, args=(eos_multi,))
+            if w:
+                for warning in w:
+                    print(f"  ODE Integration Warning (p_c={central_p:.3e}): {warning.message}")
+        except Exception as e:
+            print(f"  ERROR: ODE integration failed for p_c={central_p:.3e}: {e}")
+            raise
+    
     M_sol = sol[:,0]
     p_sol = sol[:,1]
 
