@@ -98,9 +98,9 @@ def main():
                     e_h_sorted = e_h_scaled[sort_idx_h]
                     n_h_sorted = n_h_raw[sort_idx_h]
                     # Create interpolation functions for inputH data.
-                    interp_p_h = interp1d(mu_h_sorted, p_h_sorted, kind='linear', fill_value="extrapolate")
-                    interp_e_h = interp1d(mu_h_sorted, e_h_sorted, kind='linear', fill_value="extrapolate")
-                    interp_n_h = interp1d(mu_h_sorted, n_h_sorted, kind='linear', fill_value="extrapolate")
+                    interp_p_h = interp1d(mu_h_sorted, p_h_sorted, kind='linear', bounds_error=False, fill_value=(p_h_sorted[0], p_h_sorted[-1]))
+                    interp_e_h = interp1d(mu_h_sorted, e_h_sorted, kind='linear', bounds_error=False, fill_value=(e_h_sorted[0], e_h_sorted[-1]))
+                    interp_n_h = interp1d(mu_h_sorted, n_h_sorted, kind='linear', bounds_error=False, fill_value=(n_h_sorted[0], n_h_sorted[-1]))
                     mu_h_dense = np.linspace(np.min(mu_h_sorted), np.max(mu_h_sorted), 500)
                     p_h_interp = interp_p_h(mu_h_dense)
                     e_h_interp = interp_e_h(mu_h_dense)
@@ -159,10 +159,10 @@ def main():
 
         # Create interpolation functions for inputCSC data.
         try:
-            interp_P = interp1d(mu_sorted, P_sorted, kind='linear', fill_value="extrapolate")
-            interp_e = interp1d(mu_sorted, e_sorted, kind='linear', fill_value="extrapolate")
+            interp_P = interp1d(mu_sorted, P_sorted, kind='linear', bounds_error=False, fill_value=(P_sorted[0], P_sorted[-1]))
+            interp_e = interp1d(mu_sorted, e_sorted, kind='linear', bounds_error=False, fill_value=(e_sorted[0], e_sorted[-1]))
             # New: Create an interpolation for phase index using nearest-neighbor.
-            interp_phase = interp1d(mu_sorted, phase_sorted, kind='nearest', fill_value="extrapolate")
+            interp_phase = interp1d(mu_sorted, phase_sorted, kind='nearest', bounds_error=False, fill_value=(phase_sorted[0], phase_sorted[-1]))
         except Exception as ex:
             print(f"Error during interpolation for {file}: {ex}")
             continue
