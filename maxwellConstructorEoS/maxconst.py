@@ -174,8 +174,15 @@ def main():
 
         # Clip pressure values below 0.1.
         P_interp_clipped = np.clip(P_interp, 0.1, None)
+        n_clipped_csc = np.sum(P_interp < 0.1)
+        if n_clipped_csc > 0:
+            print(f"  WARNING: Clipped {n_clipped_csc} CSC pressure values below 0.1 (min P = {np.min(P_interp):.6e})")
+        
         if inputH_exists:
             p_h_interp_clipped = np.clip(p_h_interp, 0.1, None)
+            n_clipped_h = np.sum(p_h_interp < 0.1)
+            if n_clipped_h > 0:
+                print(f"  WARNING: Clipped {n_clipped_h} hadronic pressure values below 0.1 (min P = {np.min(p_h_interp):.6e})")
 
         # --- Determine the overlapping \\(\\mu\\) range ---
         if inputH_exists:
