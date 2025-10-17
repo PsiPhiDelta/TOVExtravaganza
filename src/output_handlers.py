@@ -149,12 +149,28 @@ class TidalWriter:
             ax1.grid(True, alpha=0.3)
             
             # Plot 2: Lambda vs M
-            ax2.plot(M_arr, Lambda_arr, 'o-', markersize=4, color='red')
+            ax2.plot(M_arr, Lambda_arr, 'o-', markersize=4, color='red', label='EoS prediction')
+            
+            # Add GW170817 constraint at 1.4 M☉
+            # Constraint: Λ(1.4 M☉) = 190^{+390}_{-120} (90% credible interval)
+            # Simplified: Λ ≈ 300 ± 200 with upper limit ~800
+            M_gw = 1.4
+            Lambda_gw_central = 300
+            Lambda_gw_lower = 70   # 300 - 230
+            Lambda_gw_upper = 580  # Conservative upper limit
+            
+            ax2.errorbar(M_gw, Lambda_gw_central, 
+                        yerr=[[Lambda_gw_central - Lambda_gw_lower], 
+                              [Lambda_gw_upper - Lambda_gw_central]],
+                        fmt='*', markersize=12, color='blue', capsize=8, 
+                        linewidth=2, label='GW170817 (1.4 M☉)')
+            
             ax2.set_xlabel('Mass (solar masses)', fontsize=12)
             ax2.set_ylabel('Tidal Deformability Λ', fontsize=12)
             ax2.set_title(f'Tidal Deformability - {base_name}', fontsize=13)
             ax2.grid(True, alpha=0.3)
             ax2.set_yscale('log')
+            ax2.legend(fontsize=10)
             
             # Plot 3: k2 vs M
             ax3.plot(M_arr, k2_arr, 's-', markersize=4, color='green')
