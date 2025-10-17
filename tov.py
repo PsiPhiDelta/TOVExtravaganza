@@ -1,7 +1,6 @@
 import os
 import csv
 import numpy as np
-import warnings
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 # --------------------------------------------------------------------
@@ -160,7 +159,6 @@ def tov_equations(y, r, eos_multi):
     dMdr = 4.0 * np.pi * r*r * e_val
 
     # Add small epsilon to denominator to prevent division by zero
-    # This is better than checking and setting derivative to zero
     denom = r*(r - 2.0*M) + 1e-30
     dPdr = - ( (e_val + p)*( M + 4.0*np.pi*r**3 * p ) ) / denom
 
@@ -173,19 +171,9 @@ def solve_tov(central_p, eos_multi, r_max=RMAX, dr=DR):
     """
     r_vals = np.arange(0.0, r_max+dr, dr)
     y0 = [0.0, central_p]
-    
-    # Catch integration warnings and errors
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        try:
-            sol = odeint(tov_equations, y0, r_vals, args=(eos_multi,))
-            if w:
-                for warning in w:
-                    print(f"  ODE Integration Warning (p_c={central_p:.3e}): {warning.message}")
-        except Exception as e:
-            print(f"  ERROR: ODE integration failed for p_c={central_p:.3e}: {e}")
-            raise
-    
+    # Increase accuracy with tighter tolerances
+    sol = odeint(tov_equations, y0, r_vals, args=(eos_multi,), 
+                 rtol=1e-10, atol=1e-12)
     M_sol = sol[:,0]
     p_sol = sol[:,1]
 
@@ -207,19 +195,9 @@ def solve_tov_rad(central_p, eos_multi, r_max=RMAX, dr=DR):
     """
     r_vals = np.arange(0.0, r_max+dr, dr)
     y0 = [0.0, central_p]
-    
-    # Catch integration warnings and errors
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        try:
-            sol = odeint(tov_equations, y0, r_vals, args=(eos_multi,))
-            if w:
-                for warning in w:
-                    print(f"  ODE Integration Warning (p_c={central_p:.3e}): {warning.message}")
-        except Exception as e:
-            print(f"  ERROR: ODE integration failed for p_c={central_p:.3e}: {e}")
-            raise
-    
+    # Increase accuracy with tighter tolerances
+    sol = odeint(tov_equations, y0, r_vals, args=(eos_multi,), 
+                 rtol=1e-10, atol=1e-12)
     M_sol = sol[:,0]
     p_sol = sol[:,1]
 
@@ -276,8 +254,11 @@ def main():
             R, M = solve_tov(p_c, eos)
             # Convert M from code units to solar masses:
             M = M / Msun_in_code
-            R_list.append(R)
-            M_list.append(M)
+            
+            # Only add to plot lists if solution is valid (non-zero mass)
+            if M > 0.01:  # Filter out failed integrations
+                R_list.append(R)
+                M_list.append(M)
 
             # Interpolate each extra col at pc
             # e.g. e(pc), n(pc), ...
