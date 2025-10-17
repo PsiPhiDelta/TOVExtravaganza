@@ -125,3 +125,6 @@ venv.bak/
 *.txt
 *.png
 *.dat
+
+# Export folder (generated results)
+export/

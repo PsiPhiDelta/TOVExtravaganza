@@ -1,15 +1,16 @@
+#!/usr/bin/env python3
 import os
 import csv
 import numpy as np
-from scipy.integrate import odeint
 import matplotlib.pyplot as plt
+
 # --------------------------------------------------------------------
 # 1) TOTALLY UNNECESSARY PHYSICAL CONSTANTS (for your amusement only)
 # --------------------------------------------------------------------
 # Even though we used to brag about how to convert from MeV^-4 to code units,
 # now we assume your input is ALREADY in TOV "code units" (dimensionless).
 # So we do not actually need these constants in this script,
-# but let's keep them anyway—like an old friend we can’t let go of.
+# but let's keep them anyway—like an old friend we can't let go of.
 #
 # c0   = 299792458         # speed of light, m/s
 # G    = 6.67408e-11       # gravitational constant, m^3 / (kg s^2)
@@ -17,23 +18,29 @@ import matplotlib.pyplot as plt
 # hbar = 1.054571817e-34   # reduced Planck constant, J*s
 #
 #
-# But seriously, we’re not using them here, because you told us
+# But seriously, we're not using them here, because you told us
 # your file is *already* in those sweet dimensionless code units.
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# Now we use the fancy object-oriented modules from src/!
+from src.eos import EOS
+from src.tov_solver import TOVSolver
+from src.output_handlers import MassRadiusWriter
+
 # Use this constant to convert from code units to solar masses:
 Msun_in_code = 1.4766  # 1 Msun = 1.4766 (G=c=1) length units
+
 ###############################################################################
 # USER SETTINGS
 ###############################################################################
-FILENAME = "./inputCode/hsdd2.csv"  # EOS file in TOV code units
+FILENAME = "./inputCode/test.csv"  # EOS file in TOV code units
 RMAX = 100.0                       # Maximum radius for TOV
 DR = 0.001                        # Radial step
 NUM_STARS = 500                    # Number of central pressures to sample
 
 ###############################################################################
-# 1) Read an EOS CSV with multiple columns.
-#    We assume the first column is "p", the second is "e", 
-#    and any additional columns are "extra" columns in code units.
+# BACKWARD COMPATIBILITY FUNCTIONS
+# These let radial.py still work with the old function calls
 ###############################################################################
 def read_eos_csv_multi(filename):
     """
@@ -106,10 +113,12 @@ def read_eos_csv_multi(filename):
 
     return data_dict, header
 
-###############################################################################
-# 2) EOS class with piecewise-linear interpolation in p for e, col2, etc.
-###############################################################################
+
 class EOSMulti:
+    """
+    Backward compatibility wrapper for radial.py
+    This just wraps the new EOS class from src/
+    """
     def __init__(self, data_dict, colnames):
         self.data_dict = data_dict
         self.colnames = colnames
@@ -118,175 +127,102 @@ class EOSMulti:
         if self.n < 2:
             raise ValueError("Need at least 2 data points for interpolation.")
         self.ilast = 0  # bracket index for speed
+        
+        # Create the real EOS object from src/
+        self._eos = EOS(data_dict, colnames)
 
     def get_value(self, colname, p):
-        # clamp
-        if p <= self.p_table[0]:
-            return self.data_dict[colname][0]
-        if p >= self.p_table[-1]:
-            return self.data_dict[colname][-1]
-
-        i = self.ilast
-        # move left
-        while i>0 and p<self.p_table[i]:
-            i -= 1
-        # move right
-        while i<(self.n-1) and p>self.p_table[i+1]:
-            i += 1
-
-        p_i   = self.p_table[i]
-        p_ip1 = self.p_table[i+1]
-        c_i   = self.data_dict[colname][i]
-        c_ip1 = self.data_dict[colname][i+1]
-
-        frac = (p - p_i)/(p_ip1 - p_i)
-        val  = c_i + frac*(c_ip1 - c_i)
-
-        self.ilast = i
-        return val
+        return self._eos.get_value(colname, p)
 
     def get_e_of_p(self, p):
-        return self.get_value("e", p)
+        return self._eos.get_energy_density(p)
+    
+    def interp(self, colname, p):
+        """For radial.py compatibility"""
+        return self._eos.get_value(colname, p)
 
-###############################################################################
-# 3) TOV equations in dimensionless code units
-###############################################################################
-def tov_equations(y, r, eos_multi):
-    M, p = y
-    if p <= 0.0:
-        return [0.0, 0.0]
-    e_val = eos_multi.get_e_of_p(p)
-    dMdr = 4.0 * np.pi * r*r * e_val
-
-    # Add small epsilon to denominator to prevent division by zero
-    denom = r*(r - 2.0*M) + 1e-30
-    dPdr = - ( (e_val + p)*( M + 4.0*np.pi*r**3 * p ) ) / denom
-
-    return [dMdr, dPdr]
 
 def solve_tov(central_p, eos_multi, r_max=RMAX, dr=DR):
-    """
-    Integrate TOV from r=0..r_max or p->0.
-    Return (R, M) at the surface + the radial arrays if you like
-    """
-    r_vals = np.arange(0.0, r_max+dr, dr)
-    y0 = [0.0, central_p]
-    # Increase accuracy with tighter tolerances
-    sol = odeint(tov_equations, y0, r_vals, args=(eos_multi,), 
-                 rtol=1e-10, atol=1e-12)
-    M_sol = sol[:,0]
-    p_sol = sol[:,1]
+    """Legacy function for backward compatibility"""
+    solver = TOVSolver(eos_multi._eos, r_max, dr)
+    star = solver.solve(central_p)
+    return star.radius, star.mass_code
 
-    idx_surface = np.where(p_sol<=0.0)[0]
-    if len(idx_surface)>0:
-        i_surf = idx_surface[0]
-    else:
-        i_surf = len(r_vals)-1
-
-    R = r_vals[i_surf]
-    M = M_sol[i_surf]
-
-    return R, M
 
 def solve_tov_rad(central_p, eos_multi, r_max=RMAX, dr=DR):
-    """
-    Integrate TOV from r=0..r_max or p->0.
-    Return (R, M) at the surface + the radial arrays if you like
-    """
-    r_vals = np.arange(0.0, r_max+dr, dr)
-    y0 = [0.0, central_p]
-    # Increase accuracy with tighter tolerances
-    sol = odeint(tov_equations, y0, r_vals, args=(eos_multi,), 
-                 rtol=1e-10, atol=1e-12)
-    M_sol = sol[:,0]
-    p_sol = sol[:,1]
+    """Legacy function for backward compatibility with radial.py"""
+    solver = TOVSolver(eos_multi._eos, r_max, dr)
+    star, r_vals, M_vals, p_vals = solver.solve(central_p, return_profile=True)
+    
+    # Return in the old format that radial.py expects
+    return r_vals, M_vals, p_vals, star.radius, star.mass_code
 
-    idx_surface = np.where(p_sol<=0.0)[0]
-    if len(idx_surface)>0:
-        i_surf = idx_surface[0]
-    else:
-        i_surf = len(r_vals)-1
-
-    R = r_vals[i_surf]
-    M = M_sol[i_surf]
-
-    return r_vals, M_sol, p_sol, R, M
 
 ###############################################################################
 # 4) MAIN => for each star solution, store 1 line: (p_c, R, M, e(pc), col2(pc), ...)
 ###############################################################################
 def main():
-    # Read the multi-column EOS
-    data_dict, colnames = read_eos_csv_multi(FILENAME)
-    eos = EOSMulti(data_dict, colnames)
+    """
+    Main function - now using fancy OO modules from src/
+    but keeping all the comedic style you know and love!
+    """
+    # Read the multi-column EOS using our fancy new EOS class
+    eos = EOS.from_file(FILENAME)
+    
+    print(f"Loaded EOS from {FILENAME}")
+    print(f"  {eos.n_points} data points")
+    print(f"  Columns: {', '.join(eos.colnames)}")
+    
+    # Create our solver object - now from src/!
+    solver = TOVSolver(eos, r_max=RMAX, dr=DR)
 
     # Prepare an output folder MR
-    out_folder = "MR"
+    out_folder = "export/MR"
     if not os.path.exists(out_folder):
         os.makedirs(out_folder)
 
     # We'll create a single CSV with 1 line per star:
     # p_c, R, M, e(pc), plus other columns col2(pc)...
     base_name = os.path.splitext(os.path.basename(FILENAME))[0]
-    out_csv = os.path.join(out_folder, f"{base_name}_stars.csv")
-    out_pdf = os.path.join(out_folder, f"{base_name}.pdf")
+    
+    # Generate the sequence of stars using our fancy solver
+    print(f"\nSolving TOV for {NUM_STARS} central pressures...")
+    
+    # Get pressure range
+    p_range = eos.get_pressure_range()
+    p_min = max(p_range[0], 1e-15)
+    p_max = p_range[1]
+    central_pressures = np.logspace(np.log10(p_min), np.log10(p_max), NUM_STARS)
+    
+    # Solve for each pressure
+    stars = []
+    for p_c in central_pressures:
+        try:
+            star = solver.solve(p_c)
+            stars.append(star)
+            M_solar = star.mass_solar
+            print(f"Star with p_c={p_c:.3e} => R={star.radius:.4f}, M={M_solar:.4f}")
+        except Exception as e:
+            print(f"Failed at p_c={p_c:.3e}: {e}")
+    
+    # Use our fancy writer from src/
+    writer = MassRadiusWriter(output_folder=out_folder)
+    csv_path, pdf_path = writer.write_stars(stars, base_name)
+    
+    # Print some stats
+    valid_stars = [s for s in stars if s.mass_solar > 0.01]
+    if valid_stars:
+        max_star = max(valid_stars, key=lambda s: s.mass_solar)
+        print(f"\nValid solutions: {len(valid_stars)}/{len(stars)}")
+        print(f"Maximum mass: {max_star.mass_solar:.4f} Msun at R={max_star.radius:.4f} km")
+        
+        # Find star near 1.4 solar masses
+        near_14 = min(valid_stars, key=lambda s: abs(s.mass_solar - 1.4))
+        print(f"Near 1.4 Msun: M={near_14.mass_solar:.4f} Msun, R={near_14.radius:.4f} km")
 
-    # We'll define a set of central pressures in log space
-    p_min = max(data_dict["p"][0], 1e-15)
-    p_max = data_dict["p"][-1]
-    p_c_values = np.logspace(np.log10(p_min), np.log10(p_max), NUM_STARS)
-
-    # Build CSV header:
-    # We'll do: p_c, R, M, then for each col in colnames (except "p"), we store that col at pc
-    # Because "p" is the independent variable, maybe skip it or rename it?
-    # Let's skip "p" in the extras if you only want the other columns
-    extra_cols = [c for c in colnames if c != "p"]
-    header = ["p_c", "R", "M"] + [f"{c}(pc)" for c in extra_cols]
-
-    R_list = []
-    M_list = []
-
-    with open(out_csv, "w", encoding="utf-8") as fcsv:
-        fcsv.write(",".join(header) + "\n")
-
-        for p_c in p_c_values:
-            # Solve TOV
-            R, M = solve_tov(p_c, eos)
-            # Convert M from code units to solar masses:
-            M = M / Msun_in_code
-            
-            # Only add to plot lists if solution is valid (non-zero mass)
-            if M > 0.01:  # Filter out failed integrations
-                R_list.append(R)
-                M_list.append(M)
-
-            # Interpolate each extra col at pc
-            # e.g. e(pc), n(pc), ...
-            extras_at_pc = []
-            for c in extra_cols:
-                val_c = eos.get_value(c, p_c)
-                extras_at_pc.append(val_c)
-
-            # Write a single line: p_c, R, M, e(pc), n(pc), ...
-            row_data = [p_c, R, M] + extras_at_pc
-            row_str = ",".join(f"{x:.6e}" for x in row_data)
-            fcsv.write(row_str + "\n")
-
-            print(f"Star with p_c={p_c:.3e} => R={R:.4f}, M={M:.4f}")
-
-    # Now we plot M(R) across all solutions
-    plt.figure()
-    plt.plot(R_list, M_list, "o-", label="TOV solutions")
-    plt.xlabel("R (code units)")
-    plt.ylabel("M (solar masses)")
-    plt.title(f"M(R) from {base_name}")
-    plt.grid(True)
-    plt.legend()
-    plt.savefig(out_pdf)
-    plt.show()
-
-    print(f"\nDone! Wrote {len(p_c_values)} lines to '{out_csv}'")
-    print(f"Saved M(R) plot to '{out_pdf}'\n")
+    print(f"\nWrote {len(stars)} stars to: {csv_path}")
+    print(f"Saved M-R plot to: {pdf_path}")
+    print("\nDone!\n")
 
 
 if __name__ == "__main__":
