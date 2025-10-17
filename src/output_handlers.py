@@ -84,13 +84,17 @@ class MassRadiusWriter:
 class TidalWriter:
     """Writes tidal deformability results to CSV and generates plots."""
     
-    def __init__(self, output_folder="export/MR"):
+    def __init__(self, output_folder="export/stars"):
         """Initialize tidal writer."""
         self.output_folder = output_folder
-        if not os.path.exists(output_folder):
-            os.makedirs(output_folder)
+        self.csv_folder = os.path.join(output_folder, "csv")
+        self.plot_folder = os.path.join(output_folder, "plots")
+        if not os.path.exists(self.csv_folder):
+            os.makedirs(self.csv_folder)
+        if not os.path.exists(self.plot_folder):
+            os.makedirs(self.plot_folder)
     
-    def write_results(self, results, base_name):
+    def write_results(self, results, base_name, show_plot=True, save_png=False):
         """
         Write tidal results to CSV and generate plots.
         
@@ -100,51 +104,72 @@ class TidalWriter:
             Tidal calculation results
         base_name : str
             Base filename
+        save_png : bool
+            If True, also save PNG versions (default: False)
             
         Returns:
         --------
         str, str
             Paths to CSV and PDF files
         """
-        out_csv = os.path.join(self.output_folder, f"{base_name}_tidal.csv")
-        out_pdf = os.path.join(self.output_folder, f"{base_name}_tidal.pdf")
+        out_csv = os.path.join(self.csv_folder, f"{base_name}.csv")
+        out_pdf = os.path.join(self.plot_folder, f"{base_name}.pdf")
         
-        # Write CSV
+        # Write CSV (filter out unphysical stars at R_max and low mass)
         with open(out_csv, "w", encoding="utf-8") as f:
             f.write("p_c,R,M_code,M_solar,Lambda,k2\n")
             
+            count = 0
             for res in results:
-                f.write(f"{res['p_c']:.6e},{res['R']:.6e},{res['M_code']:.6e},"
-                       f"{res['M_solar']:.6e},{res['Lambda']:.6e},{res['k2']:.6e}\n")
+                # Skip stars that hit r_max (unphysical) or have very low mass
+                if res['R'] < 99.0 and res['M_solar'] > 0.05:
+                    f.write(f"{res['p_c']:.6e},{res['R']:.6e},{res['M_code']:.6e},"
+                           f"{res['M_solar']:.6e},{res['Lambda']:.6e},{res['k2']:.6e}\n")
+                    count += 1
         
-        # Filter valid results for plotting
-        valid = [r for r in results if r['M_solar'] > 0.01]
+        print(f"  Filtered: kept {count}/{len(results)} physical solutions (R < 99 km, M > 0.05 Msun)")
+        
+        # Filter valid results for plotting (same as CSV filter)
+        valid = [r for r in results if r['M_solar'] > 0.05 and r['R'] < 99.0]
         
         if len(valid) > 0:
             M_arr = np.array([r['M_solar'] for r in valid])
+            R_arr = np.array([r['R'] for r in valid])
             Lambda_arr = np.array([r['Lambda'] for r in valid])
             k2_arr = np.array([r['k2'] for r in valid])
             
-            # Create plots
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+            # Create plots - 3 panels: M-R, Lambda(M), k2(M)
+            fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
             
-            # Plot 1: Lambda vs M
-            ax1.plot(M_arr, Lambda_arr, 'o-', markersize=4)
-            ax1.set_xlabel('Mass (solar masses)')
-            ax1.set_ylabel('Dimensionless Tidal Deformability Lambda')
-            ax1.set_title(f'Tidal Deformability - {base_name}')
+            # Plot 1: M-R curve (the classic!)
+            ax1.plot(R_arr, M_arr, 'o-', markersize=4)
+            ax1.set_xlabel('Radius (km)', fontsize=12)
+            ax1.set_ylabel('Mass (solar masses)', fontsize=12)
+            ax1.set_title(f'Mass-Radius - {base_name}', fontsize=13)
             ax1.grid(True, alpha=0.3)
-            ax1.set_yscale('log')
             
-            # Plot 2: k2 vs M
-            ax2.plot(M_arr, k2_arr, 's-', markersize=4, color='orange')
-            ax2.set_xlabel('Mass (solar masses)')
-            ax2.set_ylabel('Tidal Love Number k2')
-            ax2.set_title(f'Love Number - {base_name}')
+            # Plot 2: Lambda vs M
+            ax2.plot(M_arr, Lambda_arr, 'o-', markersize=4, color='red')
+            ax2.set_xlabel('Mass (solar masses)', fontsize=12)
+            ax2.set_ylabel('Tidal Deformability Λ', fontsize=12)
+            ax2.set_title(f'Tidal Deformability - {base_name}', fontsize=13)
             ax2.grid(True, alpha=0.3)
+            ax2.set_yscale('log')
+            
+            # Plot 3: k2 vs M
+            ax3.plot(M_arr, k2_arr, 's-', markersize=4, color='green')
+            ax3.set_xlabel('Mass (solar masses)', fontsize=12)
+            ax3.set_ylabel('Love Number k₂', fontsize=12)
+            ax3.set_title(f'Love Number - {base_name}', fontsize=13)
+            ax3.grid(True, alpha=0.3)
             
             plt.tight_layout()
             plt.savefig(out_pdf, dpi=150)
+            if save_png:
+                out_png = out_pdf.replace('.pdf', '.png')
+                plt.savefig(out_png, dpi=150)
+            if show_plot:
+                plt.show()
             plt.close()
         
         return out_csv, out_pdf

@@ -120,11 +120,37 @@ venv.bak/
 .DS_Store
 /.idea/
 
-
+### README Preview ###
+README_preview.html
+*preview*.py
+generate_preview.py
+make_preview.py
 
 *.txt
-*.png
 *.dat
 
-# Export folder (generated results)
-export/
+# Export folder (generated results) - but keep showcase examples for README
+export/*
+
+# Keep hsdd2 showcase plots
+!export/stars/
+export/stars/*
+!export/stars/plots/
+export/stars/plots/*
+!export/stars/plots/hsdd2.pdf
+!export/stars/plots/hsdd2.png
+
+# Keep first radial profile examples
+!export/radial_profiles/
+export/radial_profiles/*
+!export/radial_profiles/plots/
+export/radial_profiles/plots/*
+!export/radial_profiles/plots/Mass/
+export/radial_profiles/plots/Mass/*
+!export/radial_profiles/plots/Mass/mass_profile_0.pdf
+!export/radial_profiles/plots/Mass/mass_profile_0.png
+
+!export/radial_profiles/plots/Pressure/
+export/radial_profiles/plots/Pressure/*
+!export/radial_profiles/plots/Pressure/pressure_profile_0.pdf
+!export/radial_profiles/plots/Pressure/pressure_profile_0.png
