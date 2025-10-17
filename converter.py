@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 
 ###############################################################################
 # OH BOY OH BOY, WE HAVE OUR PHYSICAL CONSTANTS IN SI
@@ -212,7 +213,7 @@ def main():
     """
     This script:
       - Reads from folder inputRaw/
-      - Asks user for CSV filename (must exist in inputRaw/)
+      - Asks user for CSV filename (must exist in inputRaw/) OR accepts CLI args
       - prints your 4 factor expressions with approximate numeric values
       - asks user to choose 0..4 for input system
       - if CGS => we do separate factor for p,e
@@ -222,79 +223,129 @@ def main():
       - writes the new CSV to folder inputCode/, with default name:
           "<original_filename>.csv"
       - comedic style included. oh boy oh boy!
+    
+    CLI Usage:
+      python converter.py <input_file> <pcol> <ecol> <system> [output_file]
+      where:
+        input_file: filename in inputRaw/ (just the name, not full path)
+        pcol: pressure column (1-based)
+        ecol: energy column (1-based)  
+        system: 0-4 (0=code, 1=MeV^-4, 2=MeV*fm^-3, 3=fm^-4, 4=CGS)
+        output_file: optional output path (default: inputCode/<input_file>)
     """
     print("===== TOV CODE-UNITS: THE BIG 4 FACTORS EDITION! =====")
     
     # Create our converter object, oh boy oh boy!
     converter = EOSConverter()
-    converter.print_factors()
     
-    # Prompt user for the input file, which must exist in 'inputRaw'
-    infile = input("Enter CSV filename (from folder 'inputRaw'): ").strip()
-    input_path = os.path.join("inputRaw", infile)
-    
-    if not os.path.isfile(input_path):
-        print(f"Oh boy oh boy, cannot find '{infile}' in folder 'inputRaw'! Bailing out.")
-        return
-    
-    # Ask user if the file has a header line (column names)
-    has_header = input("\nDoes your CSV have a header line with column names? (y/n)? ").strip().lower()
-    has_header = has_header.startswith("y")
-    
-    # Read the file
-    lines, header_cols, data_start_index, num_cols = converter.read_csv_file(input_path, has_header)
-    if lines is None:
-        return
-    
-    if header_cols is not None:
-        print("\nOh boy oh boy, here are your column names (1-based) => be careful!")
-        for idx, colname in enumerate(header_cols, start=1):
-            print(f"  {idx}) {colname}")
-        print("Remember to pick your pressure and energy columns using these 1-based indices.\n")
+    # Check if we have CLI arguments
+    if len(sys.argv) >= 5:
+        # CLI mode
+        infile = sys.argv[1]
+        pcol = int(sys.argv[2]) - 1  # Convert to 0-based
+        ecol = int(sys.argv[3]) - 1  # Convert to 0-based
+        choice = sys.argv[4]
+        
+        input_path = os.path.join("inputRaw", infile)
+        
+        if not os.path.isfile(input_path):
+            print(f"Oh boy oh boy, cannot find '{infile}' in folder 'inputRaw'! Bailing out.")
+            return
+        
+        # Default output path
+        if len(sys.argv) >= 6:
+            out_file = sys.argv[5]
+        else:
+            out_file = os.path.join("inputCode", infile)
+        
+        # Assume header exists (read it)
+        has_header = True
+        lines, header_cols, data_start_index, num_cols = converter.read_csv_file(input_path, has_header)
+        if lines is None:
+            return
+        
+        print(f"\n** CLI Mode **")
+        print(f"Input: {infile}")
+        print(f"Pressure column: {pcol+1} (1-based)")
+        print(f"Energy column: {ecol+1} (1-based)")
+        print(f"System choice: {choice}")
+        print(f"Output: {out_file}")
+        
     else:
-        print("\nNo header line found (or user said 'no'). We'll just do raw columns.\n")
+        # Interactive mode
+        converter.print_factors()
+        
+        # Prompt user for the input file, which must exist in 'inputRaw'
+        infile = input("Enter CSV filename (from folder 'inputRaw'): ").strip()
+        input_path = os.path.join("inputRaw", infile)
+        
+        if not os.path.isfile(input_path):
+            print(f"Oh boy oh boy, cannot find '{infile}' in folder 'inputRaw'! Bailing out.")
+            return
+        
+        # Ask user if the file has a header line (column names)
+        has_header = input("\nDoes your CSV have a header line with column names? (y/n)? ").strip().lower()
+        has_header = has_header.startswith("y")
+        
+        # Read the file
+        lines, header_cols, data_start_index, num_cols = converter.read_csv_file(input_path, has_header)
+        if lines is None:
+            return
+        
+        if header_cols is not None:
+            print("\nOh boy oh boy, here are your column names (1-based) => be careful!")
+            for idx, colname in enumerate(header_cols, start=1):
+                print(f"  {idx}) {colname}")
+            print("Remember to pick your pressure and energy columns using these 1-based indices.\n")
+        else:
+            print("\nNo header line found (or user said 'no'). We'll just do raw columns.\n")
+        
+        # Next, ask for columns in comedic style
+        print("** Next up: we need to know which columns hold pressure and energy density. **")
+        print("But oh boy oh boy, heads up: we are using *1-based* indexing here!")
+        print("If your pressure is in the first column, type '1'. If it's in the second column,")
+        print("type '2', etc. Because apparently, 0-based indexing wasn't confusing enough.\n")
+        
+        try:
+            pcol_str = input("Which column is pressure? (1-based)? ").strip()
+            pcol = int(pcol_str) - 1
+            ecol_str = input("Which column is energy density? (1-based)? ").strip()
+            ecol = int(ecol_str) - 1
+        except ValueError:
+            print("Columns must be integers. oh boy oh boy!")
+            return
+        
+        print("\nWe have 5 options for input system => final TOV code units:")
+        print("  0) Already code units => factor=1")
+        print("  1) MeV^-4 => cMeVfm3km2/(hbarc^3) ~ 1.722898e-13")
+        print("  2) MeV*fm^-3 => cMeVfm3km2 ~ 1.323790e-06")
+        print("  3) fm^-4 => 'TODO' => ( I am lazy )")
+        print("  4) CGS => separate pFactor/eFactor => ~8.262445e-40 & ~7.425915e-19")
+        
+        choice = input("Which system (0..4)? ").strip()
+        
+        # Build the default output filename => "input_<original_name>.csv"
+        out_default_name = f"{infile}"
+        out_default_path = os.path.join("inputCode", out_default_name)
+        
+        out_file = input(f"Output file? (default: {out_default_path}): ").strip()
+        if out_file == "":
+            out_file = out_default_path
     
-    # Next, ask for columns in comedic style
-    print("** Next up: we need to know which columns hold pressure and energy density. **")
-    print("But oh boy oh boy, heads up: we are using *1-based* indexing here!")
-    print("If your pressure is in the first column, type '1'. If it's in the second column,")
-    print("type '2', etc. Because apparently, 0-based indexing wasn't confusing enough.\n")
-    
-    try:
-        pcol_str = input("Which column is pressure? (1-based)? ").strip()
-        pcol = int(pcol_str) - 1
-        ecol_str = input("Which column is energy density? (1-based)? ").strip()
-        ecol = int(ecol_str) - 1
-    except ValueError:
-        print("Columns must be integers. oh boy oh boy!")
-        return
-    
-    print("\nWe have 5 options for input system => final TOV code units:")
-    print("  0) Already code units => factor=1")
-    print("  1) MeV^-4 => cMeVfm3km2/(hbarc^3) ~ 1.722898e-13")
-    print("  2) MeV*fm^-3 => cMeVfm3km2 ~ 1.323790e-06")
-    print("  3) fm^-4 => 'TODO' => ( I am lazy )")
-    print("  4) CGS => separate pFactor/eFactor => ~8.262445e-40 & ~7.425915e-19")
-    
-    choice = input("Which system (0..4)? ").strip()
-    
+    # Common code for both modes
     pFactor, eFactor, system_desc = converter.get_factors_for_system(choice)
     if pFactor is None:
         print("Invalid choice, oh boy oh boy, no luck!")
         return
     
-    # Build the default output filename => "input_<original_name>.csv"
-    out_default_name = f"{infile}"
-    out_default_path = os.path.join("inputCode", out_default_name)
-    
-    out_file = input(f"Output file? (default: {out_default_path}): ").strip()
-    if out_file == "":
-        out_file = out_default_path
-    
     print(f"\nReading '{infile}' from 'inputRaw/' => pcol={pcol+1}, ecol={ecol+1}, system={system_desc}")
     print(f"Applying pFactor= {pFactor:e}, eFactor= {eFactor:e} => final code units.")
     print("** Will reorder columns so that p and e appear as the FIRST TWO columns in the output! **\n")
     print(f"Writing new CSV => '{out_file}', oh boy oh boy!\n")
+    
+    # Read file again if in CLI mode (to get header info)
+    if len(sys.argv) >= 5:
+        lines, header_cols, data_start_index, num_cols = converter.read_csv_file(input_path, True)
     
     # Do the conversion!
     count = converter.convert_and_write(input_path, out_file, pcol, ecol, pFactor, eFactor,

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import csv
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -10,7 +11,7 @@ import matplotlib.pyplot as plt
 # Even though we used to brag about how to convert from MeV^-4 to code units,
 # now we assume your input is ALREADY in TOV "code units" (dimensionless).
 # So we do not actually need these constants in this script,
-# but let's keep them anyway—like an old friend we can't let go of.
+# but let's keep them anyway, like an old friend we can't let go of.
 #
 # c0   = 299792458         # speed of light, m/s
 # G    = 6.67408e-11       # gravitational constant, m^3 / (kg s^2)
@@ -25,18 +26,27 @@ import matplotlib.pyplot as plt
 # Now we use the fancy object-oriented modules from src/!
 from src.eos import EOS
 from src.tov_solver import TOVSolver
-from src.output_handlers import MassRadiusWriter
+from src.tidal_calculator import TidalCalculator
+from src.output_handlers import MassRadiusWriter, TidalWriter
 
 # Use this constant to convert from code units to solar masses:
 Msun_in_code = 1.4766  # 1 Msun = 1.4766 (G=c=1) length units
 
 ###############################################################################
-# USER SETTINGS
+# DEFAULT SETTINGS (can be overridden via CLI args)
 ###############################################################################
-FILENAME = "./inputCode/test.csv"  # EOS file in TOV code units
-RMAX = 100.0                       # Maximum radius for TOV
-DR = 0.001                        # Radial step
-NUM_STARS = 500                    # Number of central pressures to sample
+DEFAULT_RMAX = 100.0                       # Maximum radius for TOV
+DEFAULT_DR = 0.001                        # Radial step
+DEFAULT_NUM_STARS = 200                    # Number of central pressures to sample
+DEFAULT_OUTPUT = "export/stars"           # Output folder
+DEFAULT_RTOL = 1e-12                       # ODE relative tolerance
+DEFAULT_ATOL = 1e-14                       # ODE absolute tolerance
+
+# Keep old names for backward compatibility with radial.py (use test.csv as default)
+FILENAME = "./inputCode/test.csv"
+RMAX = DEFAULT_RMAX
+DR = DEFAULT_DR
+NUM_STARS = DEFAULT_NUM_STARS
 
 ###############################################################################
 # BACKWARD COMPATIBILITY FUNCTIONS
@@ -161,67 +171,172 @@ def solve_tov_rad(central_p, eos_multi, r_max=RMAX, dr=DR):
 ###############################################################################
 # 4) MAIN => for each star solution, store 1 line: (p_c, R, M, e(pc), col2(pc), ...)
 ###############################################################################
-def main():
+def main(args=None):
     """
     Main function - now using fancy OO modules from src/
     but keeping all the comedic style you know and love!
+    Now with CLI arguments for extra flexibility!
     """
-    # Read the multi-column EOS using our fancy new EOS class
-    eos = EOS.from_file(FILENAME)
+    # Parse command-line arguments if provided
+    if args is None:
+        import sys
+        # Create custom help formatter to add our message before usage
+        class CustomHelpFormatter(argparse.RawDescriptionHelpFormatter):
+            def format_help(self):
+                help_text = super().format_help()
+                # Add our message at the very top
+                custom_header = """More arguments needed, did you mean?
+
+"""
+                return custom_header + help_text
+        
+        parser = argparse.ArgumentParser(
+            description="""
+===================================================================
+SIMPLE VERSION (Most certainly you want this one!):
+===================================================================
+
+Just add the name of your EOS file at the end, like this:
+
+  python tov.py inputCode/test.csv
+  python tov.py inputCode/hsdd2.csv
+  python tov.py inputCode/csc.csv
+
+That's it! It'll compute 200 stellar configurations (with tidal deformability!)
+and save everything to export/stars/ folder. Oh boy oh boy, so simple!
+
+Solve the Tolman-Oppenheimer-Volkoff equations for neutron stars.
+Even though we used to brag about physical constants, your input is
+ALREADY in TOV "code units" (dimensionless). Oh boy oh boy!
+""",
+            formatter_class=CustomHelpFormatter,
+            epilog="""
+===================================================================
+But if you are GACHI and want the ADVANCED stuff, here you go:
+===================================================================
+
+More stars for better resolution:
+  python tov.py inputCode/hsdd2.csv -n 1000
+
+High precision (finer steps, like a fancy scientist):
+  python tov.py inputCode/hsdd2.csv --dr 0.0005
+
+Quiet mode (no spam, just the goods):
+  python tov.py inputCode/hsdd2.csv -q
+
+Custom output folder (be organized, be proud):
+  python tov.py inputCode/test.csv -o export/my_awesome_results
+
+FULL GACHI MODE (all the bells and whistles):
+  python tov.py inputCode/hsdd2.csv -n 2000 --dr 0.0001 -q -o export/ultra
+
+===================================================================
+Output: Mass-radius sequences WITH tidal deformability (Lambda, k2)!
+        CSV + beautiful PDF plots in export/stars/ folder!
+===================================================================
+            """
+        )
+        parser.add_argument('input', nargs='?',
+                          help='Input EOS file (e.g., inputCode/hsdd2.csv)')
+        parser.add_argument('-o', '--output', default=DEFAULT_OUTPUT,
+                          help=f'Output folder (default: {DEFAULT_OUTPUT})')
+        parser.add_argument('-n', '--num-stars', type=int, default=DEFAULT_NUM_STARS,
+                          help=f'Number of stars to compute (default: {DEFAULT_NUM_STARS})')
+        parser.add_argument('--rmax', type=float, default=DEFAULT_RMAX,
+                          help=f'Maximum radius (default: {DEFAULT_RMAX})')
+        parser.add_argument('--dr', type=float, default=DEFAULT_DR,
+                          help=f'Radial step size (default: {DEFAULT_DR})')
+        parser.add_argument('-q', '--quiet', action='store_true',
+                          help='Suppress per-star output')
+        parser.add_argument('--no-show', action='store_true',
+                          help='Do not display plot (still saves to file)')
+        parser.add_argument('--no-plot', action='store_true',
+                          help='Skip plotting entirely')
+        parser.add_argument('--save-png', action='store_true',
+                          help='Also save PNG versions of plots (for README/web, default: PDF only)')
+        
+        args = parser.parse_args()
+        
+        # If no input file provided, print help and exit
+        if args.input is None:
+            parser.print_help()
+            sys.exit(0)
     
-    print(f"Loaded EOS from {FILENAME}")
+    # Read the multi-column EOS using our fancy new EOS class
+    eos = EOS.from_file(args.input)
+    
+    print(f"Loaded EOS from {args.input}")
     print(f"  {eos.n_points} data points")
     print(f"  Columns: {', '.join(eos.colnames)}")
     
     # Create our solver object - now from src/!
-    solver = TOVSolver(eos, r_max=RMAX, dr=DR)
+    # With high accuracy for good tidal deformability results!
+    rtol = getattr(args, 'rtol', DEFAULT_RTOL)
+    atol = getattr(args, 'atol', DEFAULT_ATOL)
+    solver = TOVSolver(eos, r_max=args.rmax, dr=args.dr, rtol=rtol, atol=atol)
+    
+    # Also create tidal calculator for Lambda and k2!
+    tidal_calc = TidalCalculator(solver)
 
-    # Prepare an output folder MR
-    out_folder = "export/MR"
+    # Prepare an output folder
+    out_folder = args.output
     if not os.path.exists(out_folder):
         os.makedirs(out_folder)
 
     # We'll create a single CSV with 1 line per star:
-    # p_c, R, M, e(pc), plus other columns col2(pc)...
-    base_name = os.path.splitext(os.path.basename(FILENAME))[0]
+    # p_c, R, M, Lambda, k2, e(pc), plus other columns col2(pc)...
+    base_name = os.path.splitext(os.path.basename(args.input))[0]
     
     # Generate the sequence of stars using our fancy solver
-    print(f"\nSolving TOV for {NUM_STARS} central pressures...")
+    print(f"\nSolving TOV + Tidal Deformability for {args.num_stars} central pressures...")
     
     # Get pressure range
     p_range = eos.get_pressure_range()
     p_min = max(p_range[0], 1e-15)
     p_max = p_range[1]
-    central_pressures = np.logspace(np.log10(p_min), np.log10(p_max), NUM_STARS)
+    central_pressures = np.logspace(np.log10(p_min), np.log10(p_max), args.num_stars)
     
-    # Solve for each pressure
-    stars = []
+    # Solve for each pressure - including tidal deformability!
+    tidal_results = []
     for p_c in central_pressures:
         try:
-            star = solver.solve(p_c)
-            stars.append(star)
-            M_solar = star.mass_solar
-            print(f"Star with p_c={p_c:.3e} => R={star.radius:.4f}, M={M_solar:.4f}")
+            result = tidal_calc.compute(p_c)
+            # Add p_c to the result dictionary
+            result['p_c'] = p_c
+            tidal_results.append(result)
+            if not args.quiet:
+                M = result['M_solar']
+                R = result['R']
+                Lambda = result['Lambda']
+                k2 = result['k2']
+                print(f"p_c={p_c:.3e} => M={M:.4f} Msun, R={R:.2f} km, Lambda={Lambda:.2f}, k2={k2:.4f}")
         except Exception as e:
-            print(f"Failed at p_c={p_c:.3e}: {e}")
+            if not args.quiet:
+                print(f"Failed at p_c={p_c:.3e}: {e}")
     
-    # Use our fancy writer from src/
-    writer = MassRadiusWriter(output_folder=out_folder)
-    csv_path, pdf_path = writer.write_stars(stars, base_name)
+    # Use our fancy tidal writer from src/ (has all the data: M, R, Lambda, k2)
+    writer = TidalWriter(output_folder=out_folder)
+    show_plot = not args.no_show and not args.no_plot
+    csv_path, pdf_path = writer.write_results(tidal_results, base_name, show_plot=show_plot, save_png=args.save_png)
+    
+    if args.save_png:
+        print("\n✓ Also saved PNG versions for README/web display")
     
     # Print some stats
-    valid_stars = [s for s in stars if s.mass_solar > 0.01]
-    if valid_stars:
-        max_star = max(valid_stars, key=lambda s: s.mass_solar)
-        print(f"\nValid solutions: {len(valid_stars)}/{len(stars)}")
-        print(f"Maximum mass: {max_star.mass_solar:.4f} Msun at R={max_star.radius:.4f} km")
+    valid_results = [r for r in tidal_results if r['M_solar'] > 0.01]
+    if valid_results:
+        max_result = max(valid_results, key=lambda r: r['M_solar'])
+        print(f"\nValid solutions: {len(valid_results)}/{len(tidal_results)}")
+        print(f"Maximum mass: {max_result['M_solar']:.4f} Msun at R={max_result['R']:.2f} km")
         
-        # Find star near 1.4 solar masses
-        near_14 = min(valid_stars, key=lambda s: abs(s.mass_solar - 1.4))
-        print(f"Near 1.4 Msun: M={near_14.mass_solar:.4f} Msun, R={near_14.radius:.4f} km")
+        # Find star near 1.4 solar masses and print its tidal deformability!
+        near_14 = min(valid_results, key=lambda r: abs(r['M_solar'] - 1.4))
+        print(f"Near 1.4 Msun: M={near_14['M_solar']:.4f} Msun, R={near_14['R']:.2f} km")
+        print(f"              Lambda={near_14['Lambda']:.2f}, k2={near_14['k2']:.4f}")
 
-    print(f"\nWrote {len(stars)} stars to: {csv_path}")
-    print(f"Saved M-R plot to: {pdf_path}")
+    print(f"\nWrote {len(tidal_results)} stars to: {csv_path}")
+    if not args.no_plot:
+        print(f"Saved M-R plot to: {pdf_path}")
     print("\nDone!\n")
 
 
