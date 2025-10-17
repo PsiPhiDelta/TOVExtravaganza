@@ -26,7 +26,7 @@ Msun_in_code = 1.4766  # 1 Msun = 1.4766 (G=c=1) length units
 ###############################################################################
 # USER SETTINGS
 ###############################################################################
-FILENAME = "./inputCode/test.csv"  # EOS file in TOV code units
+FILENAME = "./inputCode/hsdd2.csv"  # EOS file in TOV code units
 RMAX = 100.0                       # Maximum radius for TOV
 DR = 0.001                        # Radial step
 NUM_STARS = 500                    # Number of central pressures to sample
@@ -159,14 +159,10 @@ def tov_equations(y, r, eos_multi):
     e_val = eos_multi.get_e_of_p(p)
     dMdr = 4.0 * np.pi * r*r * e_val
 
-    denom = r*(r - 2.0*M)
-    # Use relative tolerance based on floating point precision
-    # Check if denominator is too small relative to r^2 (which is the dominant term at small r)
-    eps = np.finfo(float).eps
-    if abs(denom) < eps * max(r*r, abs(r*M)):
-        dPdr = 0.0
-    else:
-        dPdr = - ( (e_val + p)*( M + 4.0*np.pi*r**3 * p ) ) / denom
+    # Add small epsilon to denominator to prevent division by zero
+    # This is better than checking and setting derivative to zero
+    denom = r*(r - 2.0*M) + 1e-30
+    dPdr = - ( (e_val + p)*( M + 4.0*np.pi*r**3 * p ) ) / denom
 
     return [dMdr, dPdr]
 
