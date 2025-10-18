@@ -1,12 +1,39 @@
-# TOV Extravaganza v1.0.0
+# TOV Extravaganza Release Notes
 
-**Release Date:** January 18, 2025
+**Latest Version:** v1.1.2  
+**Release Date:** October 18, 2025
 
 ---
 
 ## Overview
 
-TOV Extravaganza v1.0.0 is a Python toolkit for solving the Tolman-Oppenheimer-Volkoff (TOV) equations and computing neutron star properties, including tidal deformability for gravitational wave astronomy.
+TOV Extravaganza is a Python toolkit for solving the Tolman-Oppenheimer-Volkoff (TOV) equations and computing neutron star properties, including tidal deformability for gravitational wave astronomy.
+
+---
+
+## v1.1.2 (Latest)
+
+- Added version display to `tovextravaganza` help command
+- Updated all help messages with correct command syntax (tovx and python -m)
+- Documentation improvements
+
+## v1.1.1
+
+- Fixed wizard to use correct module paths (`python -m tovextravaganza.MODULE`)
+- Updated README and documentation with dual usage examples
+- Added venv activation warnings
+
+## v1.1.0
+
+- Major package refactor: moved all code to `tovextravaganza/` folder
+- Added `tovextravaganza` help command
+- Added `tovx-demo` command for easy example file access
+- Dual usage documentation (pip + source)
+- Clean package structure following Python best practices
+
+## v1.0.0
+
+TOV Extravaganza v1.0.0 is the initial release with tidal deformability calculations, CLI tools, and interactive wizard.
 
 ---
 
@@ -26,11 +53,6 @@ TOV Extravaganza v1.0.0 is a Python toolkit for solving the Tolman-Oppenheimer-V
 - Beginner-friendly guided workflow
 - Automatic file detection and validation
 - Step-by-step instructions
-
-### Object-Oriented Architecture
-- Modular design with `src/` package structure
-- Clean separation of concerns: EOS handling, TOV integration, tidal calculations, output management
-- Backward-compatible with existing workflows
 
 ---
 

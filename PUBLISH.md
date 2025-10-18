@@ -155,8 +155,8 @@ For future releases:
 
 3. Create git tag:
    ```bash
-   git tag -a v1.0.1 -m "Release v1.0.1"
-   git push origin v1.0.1
+   git tag -a v1.1.3 -m "Release v1.1.3"
+   git push origin v1.1.3
    ```
 
 4. Rebuild and republish:
