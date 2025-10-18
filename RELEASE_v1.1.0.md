@@ -99,7 +99,7 @@ If you use TOV Extravaganza in your research, please cite:
   author = {Gholami, Hosein},
   title = {{TOVExtravaganza: Python toolkit for solving TOV equations}},
   url = {https://github.com/PsiPhiDelta/TOVExtravaganza},
-  version = {1.1.0},
+  version = {1.1.2},
   year = {2025}
 }
 ```
