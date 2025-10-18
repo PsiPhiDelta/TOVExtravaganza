@@ -1,5 +1,6 @@
 # p(code_units), e(code_units) => first two columns, plus original columns afterward
 # system=CGS => separate p/e => code, pFactor=8.262445e-40, eFactor=7.425915e-19
+# p (code_units),epsilon (code_units),n
 7.843833e-17,1.231819e-12,1.e-9
 8.358281e-17,1.304810e-12,1.059253725177289e-9
 8.910376e-17,1.382125e-12,1.1220184543019634e-9
