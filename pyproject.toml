@@ -54,5 +54,5 @@ tovx-demo = "tovextravaganza.utils.demo:main"
 tovextravaganza = "tovextravaganza.utils.help_command:main"
 
 [tool.setuptools]
-packages = ["tovextravaganza"]
+packages = {find = {}}  # Automatically discover all packages
 
