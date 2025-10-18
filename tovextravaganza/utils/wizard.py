@@ -80,6 +80,10 @@ def run_command(cmd_list, description):
     print(f"🚀 {description}")
     print(f"{'─'*70}\n")
     
+    # Replace 'python' with current interpreter (works on all platforms!)
+    if cmd_list[0] in ['python', 'python3']:
+        cmd_list[0] = sys.executable
+    
     cmd_str = ' '.join(cmd_list)
     print(f"Running: {cmd_str}\n")
     
@@ -185,7 +189,7 @@ def main():
         num_stars = input("\nNumber of stars [200]: ").strip()
         num_stars = num_stars if num_stars else "200"
         
-        cmd = ['python', '-m', 'tovextravaganza.tov', eos_path, '-n', num_stars, '--no-show']
+        cmd = ['python', '-m', 'tovextravaganza.cli.tov', eos_path, '-n', num_stars, '--no-show']
         
         if run_command(cmd, f"Computing {num_stars} neutron stars"):
             print("\n✓ Results saved to export/stars/")
@@ -203,7 +207,7 @@ def main():
         choice = input("\nChoice [1]: ").strip()
         choice = choice if choice else "1"
         
-        cmd = ['python', '-m', 'tovextravaganza.radial', eos_path]
+        cmd = ['python', '-m', 'tovextravaganza.cli.radial', eos_path]
         
         if choice == "1":
             num_profiles = input("\nHow many profiles? [10]: ").strip()
