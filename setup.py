@@ -12,7 +12,7 @@ def read_file(filename):
 
 setup(
     name='tovextravaganza',
-    version='1.1.2',
+    version='1.2.1',
     author='Hosein Gholami',
     author_email='mohogholami@gmail.com',
     description='Python toolkit for solving the Tolman-Oppenheimer-Volkoff (TOV) equations and exploring neutron star properties',
@@ -24,7 +24,7 @@ setup(
         'Source': 'https://github.com/PsiPhiDelta/TOVExtravaganza',
         'Documentation': 'https://github.com/PsiPhiDelta/TOVExtravaganza#readme',
     },
-    packages=['tovextravaganza'],
+    packages=find_packages(),
     package_data={
         'tovextravaganza': ['../inputCode/*.csv', '../inputRaw/*.csv'],
     },
@@ -42,12 +42,12 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'tovx=tovextravaganza.tov:main',
-            'tovx-radial=tovextravaganza.radial:main',
-            'tovx-converter=tovextravaganza.converter:main',
-            'tovx-wizard=tovextravaganza.tov_wizard:main',
-            'tovx-demo=tovextravaganza.demo:main',
-            'tovextravaganza=tovextravaganza.help_command:main',
+            'tovx=tovextravaganza.cli.tov:main',
+            'tovx-radial=tovextravaganza.cli.radial:main',
+            'tovx-converter=tovextravaganza.cli.converter:main',
+            'tovx-wizard=tovextravaganza.utils.wizard:main',
+            'tovx-demo=tovextravaganza.utils.demo:main',
+            'tovextravaganza=tovextravaganza.utils.help_command:main',
         ],
     },
     classifiers=[

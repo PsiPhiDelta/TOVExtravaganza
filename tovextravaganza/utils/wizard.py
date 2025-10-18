@@ -80,6 +80,10 @@ def run_command(cmd_list, description):
     print(f"🚀 {description}")
     print(f"{'─'*70}\n")
     
+    # Replace 'python' with current interpreter (works on all platforms!)
+    if cmd_list[0] in ['python', 'python3']:
+        cmd_list[0] = sys.executable
+    
     cmd_str = ' '.join(cmd_list)
     print(f"Running: {cmd_str}\n")
     
@@ -129,7 +133,7 @@ def main():
                 else:
                     print("\nRunning interactive converter...")
                 
-                run_command(['python', 'converter.py'], "EOS Converter")
+                run_command(['python', '-m', 'tovextravaganza.cli.converter'], "EOS Converter")
                 
                 # Ask user what the output file was
                 code_files = list_eos_files('inputCode')
@@ -153,7 +157,7 @@ def main():
             print(f"  • {f}")
         
         print("\nOh boy oh boy! Let's convert one to code units first!")
-        run_command(['python', '-m', 'tovextravaganza.converter'], "EOS Converter")
+        run_command(['python', '-m', 'tovextravaganza.cli.converter'], "EOS Converter")
         
         code_files = list_eos_files('inputCode')
         eos_file = choose_from_list(code_files, "Which converted file do you want to use?")
@@ -185,7 +189,7 @@ def main():
         num_stars = input("\nNumber of stars [200]: ").strip()
         num_stars = num_stars if num_stars else "200"
         
-        cmd = ['python', '-m', 'tovextravaganza.tov', eos_path, '-n', num_stars, '--no-show']
+        cmd = ['python', '-m', 'tovextravaganza.cli.tov', eos_path, '-n', num_stars, '--no-show']
         
         if run_command(cmd, f"Computing {num_stars} neutron stars"):
             print("\n✓ Results saved to export/stars/")
@@ -203,7 +207,7 @@ def main():
         choice = input("\nChoice [1]: ").strip()
         choice = choice if choice else "1"
         
-        cmd = ['python', '-m', 'tovextravaganza.radial', eos_path]
+        cmd = ['python', '-m', 'tovextravaganza.cli.radial', eos_path]
         
         if choice == "1":
             num_profiles = input("\nHow many profiles? [10]: ").strip()
@@ -261,7 +265,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n\nOh boy oh boy, an error occurred: {e}")
         print("Don't worry, you can still run the scripts manually!")
-        print("  python -m tovextravaganza.tov inputCode/<your_eos>.csv")
-        print("  python -m tovextravaganza.radial inputCode/<your_eos>.csv\n")
+        print("  python -m tovextravaganza.cli.tov inputCode/<your_eos>.csv")
+        print("  python -m tovextravaganza.cli.radial inputCode/<your_eos>.csv\n")
         sys.exit(1)
 

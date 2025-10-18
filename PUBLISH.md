@@ -1,191 +1,83 @@
-# Publishing TOV Extravaganza to PyPI
+# Publishing Guide (For Maintainers)
+
+Quick guide for publishing new versions to PyPI.
+
+---
 
 ## Prerequisites
 
-1. **Create PyPI account**: https://pypi.org/account/register/
-2. **Install build tools**:
-   ```bash
-   pip install build twine
-   ```
+1. Install tools: `pip install build twine`
+2. Get PyPI API token: https://pypi.org/manage/account/token/
 
-## Build the Package
+---
 
-### 1. Clean Previous Builds
+## Publishing Workflow
+
+### 1. Update Version
+
+Edit 3 files:
+- `setup.py` → `version='1.x.x'`
+- `pyproject.toml` → `version = "1.x.x"`
+- `tovextravaganza/__init__.py` → `__version__ = "1.x.x"`
+
+### 2. Update Changelog
+
+Add entry to `CHANGELOG.md`
+
+### 3. Commit and Tag
+
+```bash
+git add .
+git commit -m "Release v1.x.x: brief description"
+git tag -a v1.x.x -m "Release v1.x.x"
+git push origin main
+git push origin v1.x.x
+```
+
+### 4. Build Package
 
 ```bash
 rm -rf dist/ build/ *.egg-info
-```
-
-### 2. Build Distribution
-
-```bash
 python -m build
 ```
 
-This creates:
-- `dist/tovextravaganza-1.0.0.tar.gz` (source distribution)
-- `dist/tovextravaganza-1.0.0-py3-none-any.whl` (wheel)
-
-## Test on TestPyPI (Optional but Recommended)
-
-### 1. Upload to TestPyPI
-
-```bash
-twine upload --repository testpypi dist/*
-```
-
-### 2. Test Installation
-
-```bash
-pip install --index-url https://test.pypi.org/simple/ tovextravaganza
-```
-
-## Publish to PyPI
-
-### 1. Upload to PyPI
+### 5. Upload to PyPI
 
 ```bash
 twine upload dist/*
 ```
 
-You'll be prompted for your PyPI username and password.
+Use API token when prompted:
+- Username: `__token__`
+- Password: `pypi-YOUR_TOKEN_HERE`
 
-### 2. Verify on PyPI
+### 6. Create GitHub Release
 
-Visit: https://pypi.org/project/tovextravaganza/
+1. Go to https://github.com/PsiPhiDelta/TOVExtravaganza/releases/new
+2. Choose tag: `v1.x.x`
+3. Copy changelog entry as description
+4. Publish release
 
-## Using API Token (Recommended)
+---
 
-### 1. Create API Token
-
-- Go to https://pypi.org/manage/account/token/
-- Create a new token
-- Scope: "Entire account" or specific to "tovextravaganza"
-
-### 2. Configure `.pypirc`
+## API Token Setup
 
 Create `~/.pypirc`:
 
 ```ini
-[distutils]
-index-servers =
-    pypi
-    testpypi
-
 [pypi]
 username = __token__
 password = pypi-YOUR_API_TOKEN_HERE
-
-[testpypi]
-username = __token__
-password = pypi-YOUR_TESTPYPI_TOKEN_HERE
 ```
 
-### 3. Upload with Token
+Then `twine upload dist/*` won't prompt for credentials.
+
+---
+
+## Quick Reference
 
 ```bash
-twine upload dist/*
+# Version bump → Commit → Tag → Build → Upload → GitHub Release
 ```
 
-## Automated Publishing with GitHub Actions
-
-Create `.github/workflows/publish.yml`:
-
-```yaml
-name: Publish to PyPI
-
-on:
-  release:
-    types: [published]
-
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
-    - name: Install dependencies
-      run: |
-        pip install build twine
-    - name: Build package
-      run: python -m build
-    - name: Publish to PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      run: twine upload dist/*
-```
-
-Add `PYPI_API_TOKEN` to repository secrets:
-- Go to GitHub repo → Settings → Secrets → New repository secret
-
-## After Publishing
-
-### Update Installation Instructions
-
-In README.md, add:
-
-```markdown
-## Installation
-
-```bash
-pip install tovextravaganza
-```
-\```
-
-### Announce the Release
-
-- Create GitHub Release (already done!)
-- Share on social media
-- Update documentation
-- Send to mailing lists
-
-## Version Updates
-
-For future releases:
-
-1. Update version in:
-   - `setup.py`
-   - `pyproject.toml`
-   - `src/__init__.py` (if you add one)
-
-2. Update `CHANGELOG.md`
-
-3. Create git tag:
-   ```bash
-   git tag -a v1.0.1 -m "Release v1.0.1"
-   git push origin v1.0.1
-   ```
-
-4. Rebuild and republish:
-   ```bash
-   rm -rf dist/
-   python -m build
-   twine upload dist/*
-   ```
-
-## Troubleshooting
-
-### Error: File already exists
-
-You cannot overwrite a version on PyPI. Increment the version number.
-
-### Error: Invalid authentication
-
-Check your PyPI token or credentials in `~/.pypirc`.
-
-### Warning: Long description failed
-
-Validate your README:
-```bash
-twine check dist/*
-```
-
-## Resources
-
-- PyPI: https://pypi.org/
-- Python Packaging Guide: https://packaging.python.org/
-- Twine Documentation: https://twine.readthedocs.io/
-
+That's it! Oh boy oh boy, publishing complete! 🚀
