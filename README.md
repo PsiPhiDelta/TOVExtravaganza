@@ -1,124 +1,561 @@
-# 🌀 TOV Extravaganza! 🌀
+# 🌟 TOV Extravaganza
 
 Welcome to **TOV Extravaganza**, your Python toolkit for solving the Tolman-Oppenheimer-Volkoff (TOV) equations and exploring neutron star properties. **Oh boy oh boy!**
 
-## 📂 Folder Structure
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-```
-TOV-Extravaganza/
-├── inputRaw/          # Your raw EOS CSV files
-├── inputCode/         # Converted EOS CSV files in TOV "code units"
-├── MR/                # Mass-Radius solutions and plots
-├── plotting/
-│   └── radial/
-│       ├── Mass/      # PDF plots of Mass vs. Radius
-│       └── Pressure/  # PDF plots of Pressure vs. Radius
-├── radial.py          # Script to solve TOV for multiple stars
-├── converter.py       # Core EOS converter to TOV "code units"
-├── tov.py             # Core TOV solver for Mass-Radius analysis
-├── README.md          # This README file
-└── .gitignore         # Git ignore file
-```
-
-## 💻 Usage
-
-### 1. Convert EOS Data
-
-Sick of unit conversion? I was too. Run the `converter.py` script to convert your raw EOS data into TOV "code units":
-
-```bash
-python3 converter.py
-```
-
-*This script will prompt you to select your input file from the `inputRaw/` folder and ask a series of questions to determine the appropriate conversion factors. The converted files will be saved in the `inputCode/` directory with the same name as the input file.*
-
-### 2. Perform Mass-Radius Analysis
-
-Run the `tov.py` script to compute Mass-Radius relationships for a series of central pressures:
-
-```bash
-python3 tov.py
-```
-
-This script will:
-
-- Read the EOS data from `inputCode/`.
-- Solve the TOV equations for a specified number of stars.
-- Store the results (central pressure, radius, mass, and interpolated properties) in the `MR/` folder as a CSV file.
-- Generate a Mass-Radius plot and save it as a PDF in the same folder.
-
-### 3. Solve the TOV Equations
-
-Run the `radial.py` script to solve the TOV equations:
-
-```bash
-python3 radial.py
-```
-
-This script will:
-
-- Read the converted EOS data from `inputCode/`.
-- Solve the TOV equations for a range of central pressures.
-- Store radial profiles in `radial/metadata.txt` and `radial/<inputfilename>.json`.
-- Generate PDF plots in `plotting/radial/Mass/` and `plotting/radial/Pressure/`.
-
-### 4. Understand the Python Scripts
-
-- **`converter.py`**: Converts raw EOS data into TOV "code units." It asks you to:
-  - Select a file from `inputRaw/`.
-  - Specify pressure and energy density columns.
-  - Choose a unit system for conversion.
-  - Automatically rearrange columns in the output file for compatibility.
-
-- **`tov.py`**: Computes Mass-Radius relationships for multiple stars. It:
-  - Interpolates all columns at the central pressure of each star.
-  - Writes the results (one row per star) into a CSV file.
-  - Generates a Mass-Radius plot for easy visualization and a quick check.
-
-- **`radial.py`**: Reads the converted EOS data, solves the TOV equations for various central pressures, interpolates data across all relevant columns, and outputs the results as human-readable files, structured JSON, and plots.
-
-## 📊 Output Explained
-
-### Metadata Files
-
-- **`radial/metadata.txt`**: Human-readable radial profiles.
-- **`radial/<inputfilename>.json`**: Structured JSON data for each star.
-
-### Mass-Radius Data
-
-- **`MR/<inputfilename>_stars.csv`**: Contains rows for each star with columns:
-  - Central pressure (`p_c`), radius (`R`), mass (`M`), and interpolated values for all other columns in the EOS.
-
-- **`MR/<inputfilename>.pdf`**: A Mass-Radius plot showing the relationship across all solutions.
-
-### Plots
-
-- **Mass Profiles**: `plotting/radial/Mass/` contains PDFs showing how mass accumulates with radius.
-- **Pressure Profiles**: `plotting/radial/Pressure/` contains PDFs displaying pressure decline from core to crust.
-
-## 🧰 Troubleshooting
-
-### ⚠️ Common Errors
-
-- **`ValueError: not enough values to unpack (expected 5, got 2)`**
-  - *Solution*: Ensure `solve_tov` in `radial.py` or `tov.py` is receiving the correct EOS data and returning `r_vals, M_sol, p_sol, R, M`.
-
-- **`ODEintWarning: Excess work done on this call`**
-  - *Solution*: Tweak `DR` (radial step size) or check your EOS data for consistency.
-
-## 🖋️ Contribution
-
-Feel free to fork the repository, make your changes, and submit a pull request. We'll review it with a hearty "Oh boy oh boy, great job!"
-
-## 📢 Contact
-
-Have questions or suggestions? Reach out at [mohogholami@gmail.com](mailto:mohogholami@gmail.com).
-
-## 🏦 License
-
-This project is licensed under the MIT License. Feel free to use, modify, and share it with your fellow science enthusiasts!
+Solve TOV equations, compute tidal deformabilities, generate radial profiles, and explore the Mass-Radius relationship of neutron stars—all with a streamlined command-line interface.
 
 ---
 
-**Oh boy oh boy!** Thanks for checking out **TOV Extravaganza**. May your neutron stars be massive and your plots ever clear! 🌟
+## ✨ Features
 
+- **Interactive Wizard** 🧙‍♂️ – Beginner-friendly guided workflow (just answer questions!)
+- **Mass-Radius Calculations** – Solve TOV equations for multiple central pressures
+- **Tidal Deformability** – Compute dimensionless tidal deformability (Λ) and Love number (k₂)
+- **Radial Profiles** – Generate detailed internal structure profiles with M-R context
+- **Target-Specific Profiles** – Find stars by exact mass or radius values
+- **EOS Converter** – Convert raw equation of state data into TOV code units (CLI + interactive)
+- **Clean Output** – Organized export structure with CSV data and publication-ready plots
+
+---
+
+## 📂 Project Structure
+
+```
+TOVExtravaganza/
+├── src/                         # Core object-oriented modules
+│   ├── eos.py                   # EOS class for interpolation
+│   ├── tov_solver.py            # TOV equation solver
+│   ├── tidal_calculator.py      # Tidal deformability calculator
+│   └── output_handlers.py       # CSV and plot output handlers
+│
+├── inputRaw/                    # Raw EOS data files
+├── inputCode/                   # Converted EOS in TOV code units
+│
+├── export/                      # All output goes here!
+│   ├── stars/                   # TOV + Tidal results
+│   │   ├── csv/                 # p_c, R, M, Lambda, k2 data
+│   │   └── plots/               # M-R curves, Lambda(M), k2(M)
+│   └── radial_profiles/         # Internal structure data
+│       ├── json/                # Detailed radial profiles
+│       └── plots/               # M(r) and p(r) plots
+│
+├── tov.py                       # Main TOV + Tidal solver (CLI)
+├── radial.py                    # Radial profile generator (CLI)
+├── converter.py                 # EOS unit converter (CLI + interactive)
+├── tov_wizard.py                # 🧙‍♂️ Interactive wizard (beginner-friendly!)
+└── README.md                    # This file
+```
+
+---
+
+## 🚀 Quick Start
+
+### Installation
+
+Clone the repository and install dependencies:
+
+```bash
+git clone https://github.com/yourusername/TOVExtravaganza.git
+cd TOVExtravaganza
+pip install numpy scipy matplotlib
+```
+
+### Option 1: Interactive Wizard 🧙‍♂️ (Recommended for Beginners!)
+
+**The easiest way to get started!** Just run:
+
+```bash
+python tov_wizard.py
+```
+
+The wizard will:
+- 🎯 Guide you through the entire workflow step-by-step
+- 🔍 Auto-detect your EOS files
+- ❓ Ask simple questions (no command-line knowledge needed!)
+- 🚀 Run everything for you with progress messages
+- 🎉 Tell you exactly where your results are!
+
+**Oh boy oh boy, so easy!**
+
+### Option 2: Manual Workflow (For Power Users!)
+
+```bash
+# 1. Convert your EOS to code units (interactive or CLI)
+python converter.py                              # Interactive mode
+python converter.py hsdd2.csv 2 3 4             # CLI mode
+
+# 2. Compute Mass-Radius relationship + Tidal properties
+python tov.py inputCode/hsdd2.csv
+
+# 3. Generate detailed radial profiles
+python radial.py inputCode/hsdd2.csv -M 1.4     # For 1.4 M☉ star
+```
+
+**That's it!** Your results are in the `export/` folder. Oh boy oh boy, science!
+
+---
+
+## 🎨 Showcase
+
+### Mass-Radius Relationship
+
+Running `tov.py` generates beautiful M-R curves showing the full sequence of neutron star configurations:
+
+**Example Output:**
+```bash
+python tov.py inputCode/hsdd2.csv
+```
+
+Creates:
+- **M-R Curve**: Mass vs. Radius for the entire EoS
+- **Tidal Properties**: Λ(M) and k₂(M) relationships
+- **Key Results**: Maximum mass (~2.4 M☉ for HS(DD2) EoS), R @ 1.4 M☉ (~13 km)
+
+![Mass-Radius Plot](export/stars/plots/hsdd2.png)
+
+### Internal Structure Profiles
+
+Running `radial.py` reveals the **internal structure** from center to surface:
+
+**Example Output:**
+```bash
+python radial.py inputCode/hsdd2.csv -M 1.4 -M 2.0
+```
+
+Each profile shows:
+- **Left Panel**: M(r) or p(r) radial profile from center to surface
+- **Right Panel**: Full M-R curve with a ⭐ showing where this star lies
+
+**Mass Profile Example:**
+
+![Mass Profile](export/radial_profiles/plots/Mass/mass_profile_0.png)
+
+**Pressure Profile Example:**
+
+![Pressure Profile](export/radial_profiles/plots/Pressure/pressure_profile_0.png)
+
+
+---
+
+## 📖 Usage Guide
+
+### 1. tov.py – Mass-Radius & Tidal Deformability
+
+**The main workhorse.** Solves TOV equations and computes tidal properties for a sequence of neutron stars.
+
+#### Simple Usage
+
+```bash
+python tov.py inputCode/hsdd2.csv           # 200 stars (default)
+python tov.py inputCode/test.csv -n 500     # 500 stars
+```
+
+#### Advanced Options
+
+```bash
+python tov.py inputCode/hsdd2.csv \
+    -n 1000 \                               # Number of stars
+    -o export/my_stars \                    # Custom output folder
+    --dr 0.0001 \                           # Radial step size
+    --rmax 50 \                             # Maximum radius
+    --quiet \                               # Suppress progress messages
+    --no-plot \                             # Skip plot generation
+    --no-show                               # Don't display plot (still saves)
+```
+
+#### Output
+
+**CSV:** `export/stars/csv/<eos_name>.csv`
+```
+p_c,R,M_code,M_solar,Lambda,k2
+0.00010000,12.34,0.123,0.543,789.12,0.098
+0.00015000,11.89,0.156,0.689,456.78,0.087
+...
+```
+
+**Plots:** `export/stars/plots/<eos_name>.pdf`
+- Mass-Radius relationship
+- Λ vs M (tidal deformability)
+- k₂ vs M (Love number)
+
+#### Example Output
+
+For HS(DD2) EOS:
+- **Maximum Mass:** ~2.4 M☉
+- **Λ @ 1.4 M☉:** ~300 (dimensionless)
+- **Radius @ 1.4 M☉:** ~13 km
+
+---
+
+### 2. radial.py – Internal Structure Profiles
+
+**Get detailed profiles** of mass, pressure, and energy density from center to surface.
+
+
+#### Usage
+
+```bash
+# Generate profiles across pressure range
+python radial.py inputCode/hsdd2.csv           # 10 profiles (default)
+python radial.py inputCode/test.csv -n 20      # 20 profiles
+
+# Generate profiles for specific mass/radius
+python radial.py inputCode/hsdd2.csv -M 1.4          # Star closest to 1.4 M☉
+python radial.py inputCode/hsdd2.csv -R 12.0         # Star closest to 12 km
+python radial.py inputCode/hsdd2.csv -M 1.4 -M 2.0   # Multiple masses
+python radial.py inputCode/hsdd2.csv -M 1.4 -R 12    # By mass AND radius
+```
+
+#### Output
+
+**JSON:** `export/radial_profiles/json/<eos_name>.json`
+```json
+{
+  "stars": [
+    {
+      "p_c": 0.001,
+      "R": 12.34,
+      "M": 0.543,
+      "radial_data": {
+        "r": [0.0, 0.001, 0.002, ...],
+        "M": [0.0, 0.0001, 0.0003, ...],
+        "p": [0.001, 0.0009, 0.0008, ...],
+        "e": [0.05, 0.049, 0.048, ...]
+      }
+    }
+  ]
+}
+```
+
+**Plots:** `export/radial_profiles/plots/`
+- `Mass/mass_profile_N.pdf` – M(r) vs r
+- `Pressure/pressure_profile_N.pdf` – p(r) vs r
+
+---
+
+### 3. converter.py – EOS Unit Converter
+
+**Sick of unit conversion? I was too.** This tool converts raw EOS data into TOV code units.
+
+#### Interactive Mode
+
+```bash
+python converter.py
+```
+
+The script will guide you through:
+1. Selecting input file from `inputRaw/`
+2. Specifying if the file has a header
+3. Identifying pressure and energy density columns
+4. Choosing the unit system (MeV fm⁻³, CGS, etc.)
+
+#### CLI Mode
+
+```bash
+python converter.py <input_file> <pcol> <ecol> <system> [output_file]
+```
+
+**Example:**
+```bash
+# Convert hsdd2.csv: pressure in col 2, energy in col 3, from CGS units
+python converter.py hsdd2.csv 2 3 4 inputCode/hsdd2.csv
+```
+
+**Parameters:**
+- `<input_file>`: Filename in `inputRaw/` folder
+- `<pcol>`: Pressure column (1-based index)
+- `<ecol>`: Energy density column (1-based index)
+- `<system>`: Unit system choice (0-4, see table below)
+- `[output_file]`: Optional output path (default: `inputCode/<input_file>`)
+
+**Output:** Converted file saved to `inputCode/` with columns rearranged as `[p, e, ...]`
+
+#### Supported Unit Systems
+
+| System | Pressure Units | Energy Density Units |
+|--------|---------------|----------------------|
+| 1 | MeV fm⁻³ | MeV fm⁻³ |
+| 2 | fm⁻⁴ | fm⁻⁴ |
+| 3 | MeV⁴ | MeV⁴ |
+| 4 | CGS (dyn/cm²) | CGS (g/cm³) |
+
+---
+
+## 📊 Understanding the Physics
+
+### TOV Equations
+
+The Tolman-Oppenheimer-Volkoff equations describe hydrostatic equilibrium in general relativity:
+
+```
+dM/dr = 4πr²ε(r)
+dp/dr = -(ε + p)(M + 4πr³p) / (r(r - 2M))
+```
+
+Solved in dimensionless "code units" where G = c = M☉ = 1.
+
+### Tidal Deformability
+
+The dimensionless tidal deformability Λ characterizes how a neutron star deforms under tidal forces:
+
+```
+Λ = (2/3) k₂ (c²R/GM)⁵
+```
+
+where k₂ is the second Love number, obtained by solving a coupled ODE system with TOV.
+
+#### Love Number k₂ Calculation
+
+The tidal perturbation is governed by:
+
+```
+dy/dr = -(2/r)y - y² - y·F(r) + r²·Q(r)
+dH/dr = y
+```
+
+where:
+- `y(r) = r·dH/dr / H(r)` is the logarithmic derivative
+- `H(r)` is the metric perturbation function
+- `F(r) = (1 - 2M(r)/r)⁻¹ · [2M(r)/r² + 4πr(p(r) - ε(r))]`
+- `Q(r) = (1 - 2M(r)/r)⁻¹ · [4π(5ε(r) + 9p(r) + (ε(r) + p(r))·(dε/dp)) - 6/r² - (2M(r)/r² + 4πr(p(r) - ε(r)))²]`
+
+The Love number k₂ is then extracted at the surface (r = R):
+
+```
+k₂ = (8/5) C⁵ (1-2C)² [2C(y_R - 1) - y_R + 2] / {2C[4(y_R + 1)C⁴ + (6y_R - 4)C³ + (26 - 22y_R)C² + 3(5y_R - 8)C - 3y_R + 6] - 3(1-2C)²[2C(y_R - 1) - y_R + 2]ln(1-2C)}
+```
+
+where `C = GM/(c²R)` is the compactness and `y_R = y(R)`.
+
+
+---
+
+## 🎨 Example Showcase
+
+### Mass-Radius Curves
+
+Using HS(DD2) EOS, we compute 200 neutron star configurations:
+
+```bash
+python tov.py inputCode/hsdd2.csv
+```
+
+**Result:** The M-R curve shows:
+- Stable branch reaching M_max ≈ 2.4 M☉
+- Typical 1.4 M☉ star has R ≈ 13 km
+- Tidal deformability Λ(1.4 M☉) ≈ 300
+
+### Internal Structure
+
+For a 1.4 M☉ star:
+
+```bash
+python radial.py inputCode/hsdd2.csv -n 10
+```
+
+**Result:** Radial profiles reveal:
+- Central pressure: ~10¹⁵ g/cm³
+- Pressure drops by ~6 orders of magnitude to surface
+- Mass accumulates mostly in inner 10 km
+
+---
+
+## 🛠️ Technical Details
+
+### Code Units
+
+All calculations use **geometric units** where G = c = 1:
+
+#### Internal (Code) Units:
+- **Radius**: km
+- **Mass**: km (geometric units, where **1 M☉ = 1.4766 km**)
+- **Pressure**: dimensionless code units
+- **Energy density**: dimensionless code units
+
+#### Output Units (for display):
+- **tov.py**: Converts M to M☉ in output CSV and plots
+- **radial.py**: Shows M(r) in M☉, p(r) in MeV/fm³, r in km
+
+#### Conversion Factors:
+- **M [M☉] = M [km] / 1.4766**
+- **p [MeV/fm³] = p [code] / 1.32379×10⁻⁶**
+- **ε [MeV/fm³] = ε [code] / 1.32379×10⁻⁶**
+
+### Numerical Methods
+
+- **ODE Integration:** `scipy.integrate.odeint` with rtol=1e-12, atol=1e-14
+- **EOS Interpolation:** Piecewise-linear
+- **Division-by-zero handling:** Small epsilon added to denominator (1e-30)
+- **Boundary conditions:** Start integration at r=1e-5 to avoid r=0 singularity
+
+### Filtering
+
+The code automatically filters out unphysical solutions:
+- Stars that hit maximum radius (R = 100 km)
+- Low-mass configurations (M < 0.05 M☉)
+
+---
+
+## 📝 File Formats
+
+### Input EOS File (inputCode/)
+
+CSV format, no header, columns: `p, e, ...`
+
+```
+0.00010000,0.00050000
+0.00012000,0.00058000
+...
+```
+
+### Output CSV (export/stars/csv/)
+
+Header row with columns: `p_c, R, M_code, M_solar, Lambda, k2`
+
+```
+p_c,R,M_code,M_solar,Lambda,k2
+0.00010000,12.34,0.123,0.543,789.12,0.098
+...
+```
+
+### Output JSON (export/radial_profiles/json/)
+
+Structured JSON with full radial arrays for each star.
+
+---
+
+## ⚙️ Command Reference
+
+### tov.py
+
+| Argument | Type | Default | Description |
+|----------|------|---------|-------------|
+| `input` | positional | required | Input EOS file path |
+| `-n, --num-stars` | int | 200 | Number of stars to compute |
+| `-o, --output` | str | export/stars | Output folder |
+| `--dr` | float | 0.0005 | Radial step size |
+| `--rmax` | float | 100.0 | Maximum radius |
+| `--quiet` | flag | False | Suppress output |
+| `--no-plot` | flag | False | Skip all plots |
+| `--no-show` | flag | False | Don't display plot window |
+
+### radial.py
+
+| Argument | Type | Default | Description |
+|----------|------|---------|-------------|
+| `input` | positional | required | Input EOS file path |
+| `-n, --num-stars` | int | 10 | Number of profiles |
+| `-o, --output` | str | export/radial_profiles | Output folder |
+
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Problem:** `ValueError: not enough values to unpack`
+- **Solution:** Check that your EOS file has at least 2 columns (p, e)
+
+**Problem:** `ODEintWarning: Excess work done on this call`
+- **Solution:** Reduce `--dr` or check for discontinuities in your EOS
+
+**Problem:** All masses are zero
+- **Solution:** Your EOS might be too soft or in wrong units. Run `converter.py` first.
+
+**Problem:** UnicodeEncodeError in terminal output
+- **Solution:** Set environment variable: `PYTHONIOENCODING=utf-8`
+
+
+
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! To contribute:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+Please maintain the code style and add tests where appropriate.
+
+---
+
+## 📚 References
+
+### Key Papers
+
+1. **Tolman (1939):** Static Solutions of Einstein's Field Equations
+2. **Oppenheimer & Volkoff (1939):** On Massive Neutron Cores
+3. **Damour & Nagar (2009):** Relativistic tidal properties of neutron stars
+4. **Abbott et al. (2017):** GW170817: Observation of Gravitational Waves from a Binary Neutron Star Inspiral
+
+### EOS Databases
+
+- **CompOSE:** https://compose.obspm.fr/
+- **stellarcollapse.org:** Comprehensive EOS tables
+- **RG-NJL EoS Tables (Color-Superconducting Quark Matter):** https://github.com/marcohof/RG-NJL-EoS-tables
+
+---
+
+## 📧 Contact
+
+**Author:** Hosein Gholami  
+**Website:** [hoseingholami.com](https://hoseingholami.com/)  
+**Email:** [mohogholami@gmail.com](mailto:mohogholami@gmail.com)  
+**GitHub:** [TOVExtravaganza](https://github.com/yourusername/TOVExtravaganza)
+
+Questions? Suggestions? Found a bug? Don't hesitate to reach out or open an issue!
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+---
+
+## 📖 Citation
+
+If you use **TOV Extravaganza** in your research, please cite this repository and our work on arXiv:
+
+```bibtex
+@software{Gholami_TOVExtravaganza_Python_toolkit_2025,
+  author = {Gholami, Hosein},
+  license = {MIT},
+  month = jan,
+  title = {{TOVExtravaganza: Python toolkit for solving the Tolman-Oppenheimer-Volkoff (TOV) equations and exploring neutron star properties}},
+  url = {https://github.com/PsiPhiDelta/TOVExtravaganza},
+  version = {1.0.0},
+  year = {2025}
+}
+
+@article{Gholami:2024csc,
+  author = "Gholami, Hosein and Rather, Ishfaq Ahmad and Hofmann, Marco and Buballa, Michael and Schaffner-Bielich, J{\"u}rgen",
+  title = "{Astrophysical constraints on color-superconducting phases in compact stars within the RG-consistent NJL model}",
+  eprint = "2411.04064",
+  archivePrefix = "arXiv",
+  primaryClass = "hep-ph",
+  month = "11",
+  year = "2024"
+}
+```
+
+**arXiv:** [2411.04064](https://arxiv.org/abs/2411.04064)
+
+---
+
+## 🎉 Acknowledgments
+
+Thanks to the astrophysics and gravitational wave communities for making neutron star science accessible and exciting.
+
+**Oh boy oh boy!** May your neutron stars be massive and your convergence ever stable! 🌟
+
+---
+
+*Built with Python, NumPy, SciPy, and a healthy dose of enthusiasm for compact objects.*
