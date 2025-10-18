@@ -88,7 +88,7 @@ cd TOVExtravaganza
 pip install -r requirements.txt
 ```
 
-Run scripts directly with `python tov.py`, etc.
+Run scripts directly with `python -m tovextravaganza.tov`, etc.
 
 ### Workflow 1: Interactive Wizard 🧙‍♂️ (Easiest - Recommended!)
 
@@ -166,7 +166,7 @@ tovx inputCode/hsdd2.csv
 
 **From source:**
 ```bash
-python tov.py inputCode/hsdd2.csv
+python -m tovextravaganza.tov inputCode/hsdd2.csv
 ```
 
 Creates:
@@ -216,8 +216,8 @@ tovx inputCode/test.csv -n 500     # 500 stars
 
 **From source:**
 ```bash
-python tov.py inputCode/hsdd2.csv
-python tov.py inputCode/test.csv -n 500
+python -m tovextravaganza.tov inputCode/hsdd2.csv
+python -m tovextravaganza.tov inputCode/test.csv -n 500
 ```
 
 #### Advanced Options
@@ -229,7 +229,7 @@ tovx inputCode/hsdd2.csv -n 1000 --dr 0.0001 --quiet --no-show
 
 **From source:**
 ```bash
-python tov.py inputCode/hsdd2.csv \
+python -m tovextravaganza.tov inputCode/hsdd2.csv \
     -n 1000 \                               # Number of stars
     -o export/my_stars \                    # Custom output folder
     --dr 0.0001 \                           # Radial step size
@@ -272,14 +272,14 @@ For HS(DD2) EOS:
 
 ```bash
 # Generate profiles across pressure range
-python radial.py inputCode/hsdd2.csv           # 10 profiles (default)
-python radial.py inputCode/test.csv -n 20      # 20 profiles
+python -m tovextravaganza.radial inputCode/hsdd2.csv           # 10 profiles (default)
+python -m tovextravaganza.radial inputCode/test.csv -n 20      # 20 profiles
 
 # Generate profiles for specific mass/radius
-python radial.py inputCode/hsdd2.csv -M 1.4          # Star closest to 1.4 M☉
-python radial.py inputCode/hsdd2.csv -R 12.0         # Star closest to 12 km
-python radial.py inputCode/hsdd2.csv -M 1.4 -M 2.0   # Multiple masses
-python radial.py inputCode/hsdd2.csv -M 1.4 -R 12    # By mass AND radius
+python -m tovextravaganza.radial inputCode/hsdd2.csv -M 1.4          # Star closest to 1.4 M☉
+python -m tovextravaganza.radial inputCode/hsdd2.csv -R 12.0         # Star closest to 12 km
+python -m tovextravaganza.radial inputCode/hsdd2.csv -M 1.4 -M 2.0   # Multiple masses
+python -m tovextravaganza.radial inputCode/hsdd2.csv -M 1.4 -R 12    # By mass AND radius
 ```
 
 #### Output
@@ -322,7 +322,7 @@ tovx-converter
 
 **From source:**
 ```bash
-python converter.py
+python -m tovextravaganza.converter
 ```
 
 The script will guide you through:
@@ -334,13 +334,13 @@ The script will guide you through:
 #### CLI Mode
 
 ```bash
-python converter.py <input_file> <pcol> <ecol> <system> [output_file]
+python -m tovextravaganza.converter <input_file> <pcol> <ecol> <system> [output_file]
 ```
 
 **Example:**
 ```bash
 # Convert hsdd2.csv: pressure in col 2, energy in col 3, from CGS units
-python converter.py hsdd2.csv 2 3 4 inputCode/hsdd2.csv
+python -m tovextravaganza.converter hsdd2.csv 2 3 4 inputCode/hsdd2.csv
 ```
 
 **Parameters:**
@@ -419,7 +419,7 @@ where `C = GM/(c²R)` is the compactness and `y_R = y(R)`.
 Using HS(DD2) EOS, we compute 200 neutron star configurations:
 
 ```bash
-python tov.py inputCode/hsdd2.csv
+python -m tovextravaganza.tov inputCode/hsdd2.csv
 ```
 
 **Result:** The M-R curve shows:
@@ -432,7 +432,7 @@ python tov.py inputCode/hsdd2.csv
 For a 1.4 M☉ star:
 
 ```bash
-python radial.py inputCode/hsdd2.csv -n 10
+python -m tovextravaganza.radial inputCode/hsdd2.csv -n 10
 ```
 
 **Result:** Radial profiles reveal:
