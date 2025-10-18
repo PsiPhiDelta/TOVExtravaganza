@@ -198,9 +198,14 @@ SIMPLE VERSION (Most certainly you want this one!):
 
 Just add the name of your EOS file at the end, like this:
 
-  python tov.py inputCode/test.csv
-  python tov.py inputCode/hsdd2.csv
-  python tov.py inputCode/csc.csv
+  Via pip:
+    tovx inputCode/test.csv
+    tovx inputCode/hsdd2.csv
+    tovx inputCode/csc.csv
+
+  From source:
+    python -m tovextravaganza.tov inputCode/test.csv
+    python -m tovextravaganza.tov inputCode/hsdd2.csv
 
 That's it! It'll compute 200 stellar configurations (with tidal deformability!)
 and save everything to export/stars/ folder. Oh boy oh boy, so simple!
@@ -216,19 +221,21 @@ But if you are GACHI and want the ADVANCED stuff, here you go:
 ===================================================================
 
 More stars for better resolution:
-  python tov.py inputCode/hsdd2.csv -n 1000
+  tovx inputCode/hsdd2.csv -n 1000
+  python -m tovextravaganza.tov inputCode/hsdd2.csv -n 1000
 
 High precision (finer steps, like a fancy scientist):
-  python tov.py inputCode/hsdd2.csv --dr 0.0005
+  tovx inputCode/hsdd2.csv --dr 0.0005
+  python -m tovextravaganza.tov inputCode/hsdd2.csv --dr 0.0005
 
 Quiet mode (no spam, just the goods):
-  python tov.py inputCode/hsdd2.csv -q
+  tovx inputCode/hsdd2.csv -q
 
 Custom output folder (be organized, be proud):
-  python tov.py inputCode/test.csv -o export/my_awesome_results
+  tovx inputCode/test.csv -o export/my_awesome_results
 
 FULL GACHI MODE (all the bells and whistles):
-  python tov.py inputCode/hsdd2.csv -n 2000 --dr 0.0001 -q -o export/ultra
+  tovx inputCode/hsdd2.csv -n 2000 --dr 0.0001 -q -o export/ultra
 
 ===================================================================
 Output: Mass-radius sequences WITH tidal deformability (Lambda, k2)!
