@@ -72,7 +72,7 @@ pip install tovextravaganza
 
 This installs the package with console commands: `tovx`, `tovx-radial`, `tovx-converter`, `tovx-wizard`, `tovx-demo`, `tovextravaganza`
 
-#### Option 2: Install from Source
+#### Option 2: Install from Source (For Development)
 
 ```bash
 git clone https://github.com/PsiPhiDelta/TOVExtravaganza.git
@@ -80,7 +80,14 @@ cd TOVExtravaganza
 pip install -e .
 ```
 
-#### Option 3: Manual Installation
+**Why `-e` (editable mode)?**
+- ✅ Changes to code are **immediately reflected** - no reinstall needed!
+- ✅ Perfect for development and testing
+- ✅ Runs `tovx` commands from your local modified files
+
+> **⚠️ Important:** Regular `pip install tovextravaganza` installs a copy from PyPI. If you want to modify the code, you MUST use `pip install -e .` from the cloned repo!
+
+#### Option 3: Manual (No Installation)
 
 ```bash
 git clone https://github.com/PsiPhiDelta/TOVExtravaganza.git
@@ -89,6 +96,8 @@ pip install -r requirements.txt
 ```
 
 Run scripts directly with `python -m tovextravaganza.tov`, etc.
+
+> **Note:** Without `pip install -e .`, the `tovx` commands won't be available - you must use `python -m tovextravaganza.MODULE` syntax.
 
 ### Workflow 1: Interactive Wizard 🧙‍♂️ (Easiest - Recommended!)
 
