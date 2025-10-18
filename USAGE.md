@@ -2,9 +2,25 @@
 
 ## Installation
 
+**Global Installation:**
 ```bash
 pip install tovextravaganza
 ```
+
+**Virtual Environment (Recommended for project isolation):**
+```bash
+# Create venv
+python -m venv tovenv
+
+# Activate it
+source tovenv/bin/activate     # Linux/Mac
+tovenv\Scripts\activate         # Windows
+
+# Install
+pip install tovextravaganza
+```
+
+> **⚠️ Important:** If you use a venv, activate it every time before using the commands!
 
 This installs **4 console commands** that you can run directly from your terminal!
 
@@ -265,4 +281,5 @@ tovx-wizard
 ---
 
 **Oh boy oh boy, happy computing!** 🌟
+
 
