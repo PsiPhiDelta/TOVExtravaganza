@@ -1,20 +1,19 @@
-# Include important files
+# Include documentation
 include README.md
-include LICENSE
 include CHANGELOG.md
-include RELEASE_NOTES.md
+include DEVELOPMENT.md
+include LICENSE
 include CITATION.cff
-include pyproject.toml
-include setup.py
+include requirements.txt
 
-# Include example data
+# Include example EOS files
 recursive-include inputCode *.csv
 recursive-include inputRaw *.csv
 
 # Exclude unnecessary files
-recursive-exclude * __pycache__
-recursive-exclude * *.py[co]
-recursive-exclude * .DS_Store
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .DS_Store
 recursive-exclude export *
 recursive-exclude maxwellConstructorEoS *
 recursive-exclude ToCSV *
@@ -22,4 +21,3 @@ recursive-exclude plotting *
 recursive-exclude radial *
 exclude .gitignore
 exclude README_preview.html
-
