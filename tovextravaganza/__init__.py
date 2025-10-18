@@ -6,7 +6,7 @@ Website: https://hoseingholami.com/
 GitHub: https://github.com/PsiPhiDelta/TOVExtravaganza
 """
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 __author__ = "Hosein Gholami"
 __email__ = "mohogholami@gmail.com"
 
