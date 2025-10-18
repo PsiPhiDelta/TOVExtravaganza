@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 # your file is *already* in those sweet dimensionless code units.
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# Now we use the fancy object-oriented modules from src/!
+# Now we use the fancy object-oriented modules!
 from .eos import EOS
 from .tov_solver import TOVSolver
 from .tidal_calculator import TidalCalculator
@@ -127,7 +127,7 @@ def read_eos_csv_multi(filename):
 class EOSMulti:
     """
     Backward compatibility wrapper for radial.py
-    This just wraps the new EOS class from src/
+    This wraps the EOS class for compatibility
     """
     def __init__(self, data_dict, colnames):
         self.data_dict = data_dict
@@ -138,7 +138,7 @@ class EOSMulti:
             raise ValueError("Need at least 2 data points for interpolation.")
         self.ilast = 0  # bracket index for speed
         
-        # Create the real EOS object from src/
+        # Create the real EOS object
         self._eos = EOS(data_dict, colnames)
 
     def get_value(self, colname, p):
@@ -173,7 +173,7 @@ def solve_tov_rad(central_p, eos_multi, r_max=RMAX, dr=DR):
 ###############################################################################
 def main(args=None):
     """
-    Main function - now using fancy OO modules from src/
+    Main function - using fancy OO modules
     but keeping all the comedic style you know and love!
     Now with CLI arguments for extra flexibility!
     """
@@ -276,8 +276,7 @@ Output: Mass-radius sequences WITH tidal deformability (Lambda, k2)!
     print(f"  {eos.n_points} data points")
     print(f"  Columns: {', '.join(eos.colnames)}")
     
-    # Create our solver object - now from src/!
-    # With high accuracy for good tidal deformability results!
+    # Create our solver object with high accuracy for good tidal deformability results!
     rtol = getattr(args, 'rtol', DEFAULT_RTOL)
     atol = getattr(args, 'atol', DEFAULT_ATOL)
     solver = TOVSolver(eos, r_max=args.rmax, dr=args.dr, rtol=rtol, atol=atol)
@@ -321,7 +320,7 @@ Output: Mass-radius sequences WITH tidal deformability (Lambda, k2)!
             if not args.quiet:
                 print(f"Failed at p_c={p_c:.3e}: {e}")
     
-    # Use our fancy tidal writer from src/ (has all the data: M, R, Lambda, k2)
+    # Use our fancy tidal writer (has all the data: M, R, Lambda, k2)
     writer = TidalWriter(output_folder=out_folder)
     show_plot = not args.no_show and not args.no_plot
     csv_path, pdf_path = writer.write_results(tidal_results, base_name, show_plot=show_plot, save_png=args.save_png)
