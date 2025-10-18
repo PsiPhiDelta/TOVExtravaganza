@@ -3,7 +3,7 @@ TOV Extravaganza Help Command
 Shows quick start and usage information
 """
 
-from . import __version__
+from .. import __version__
 
 def main():
     """Display help and usage information"""

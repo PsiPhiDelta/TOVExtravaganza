@@ -24,10 +24,10 @@ import matplotlib.pyplot as plt
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Now we use the fancy object-oriented modules!
-from .eos import EOS
-from .tov_solver import TOVSolver
-from .tidal_calculator import TidalCalculator
-from .output_handlers import MassRadiusWriter, TidalWriter
+from ..core.eos import EOS
+from ..core.tov_solver import TOVSolver
+from ..core.tidal_calculator import TidalCalculator
+from ..core.output_handlers import MassRadiusWriter, TidalWriter
 
 # Use this constant to convert from code units to solar masses:
 Msun_in_code = 1.4766  # 1 Msun = 1.4766 (G=c=1) length units
