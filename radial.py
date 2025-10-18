@@ -416,7 +416,7 @@ def main(args=None):
     if args is None:
         import sys
         parser = argparse.ArgumentParser(
-            description="""Wazzup! Radial Profile Generator
+            description="""Radial Profile Generator
             
 Get the INTERNAL STRUCTURE of neutron stars!
 Shows M(r), p(r), e(r) from center to surface.""",
@@ -459,7 +459,7 @@ Output: export/radial_profiles/json/ (JSON data)
     
     # Greet the user with comedic style!
     npts = len(data_dict["p"])
-    print(f"Wazzup! We read {npts} data points (and {len(colnames)} columns) from '{args.input}'. All in code units. Good job!")
+    print(f"We read {npts} data points (and {len(colnames)} columns) from '{args.input}'. All in code units. Good job!")
     
     # Step 2: create our radial profiler object, oh boy oh boy!
     profiler = RadialProfiler(eos, output_folder=args.output)
