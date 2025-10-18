@@ -271,6 +271,20 @@ For HS(DD2) EOS:
 
 #### Usage
 
+**Via pip:**
+```bash
+# Generate profiles across pressure range
+tovx-radial inputCode/hsdd2.csv           # 10 profiles (default)
+tovx-radial inputCode/test.csv -n 20      # 20 profiles
+
+# Generate profiles for specific mass/radius
+tovx-radial inputCode/hsdd2.csv -M 1.4          # Star closest to 1.4 M☉
+tovx-radial inputCode/hsdd2.csv -R 12.0         # Star closest to 12 km
+tovx-radial inputCode/hsdd2.csv -M 1.4 -M 2.0   # Multiple masses
+tovx-radial inputCode/hsdd2.csv -M 1.4 -R 12    # By mass AND radius
+```
+
+**From source:**
 ```bash
 # Generate profiles across pressure range
 python -m tovextravaganza.radial inputCode/hsdd2.csv           # 10 profiles (default)
@@ -334,13 +348,22 @@ The script will guide you through:
 
 #### CLI Mode
 
+**Via pip:**
+```bash
+tovx-converter <input_file> <pcol> <ecol> <system> [output_file]
+```
+
+**From source:**
 ```bash
 python -m tovextravaganza.converter <input_file> <pcol> <ecol> <system> [output_file]
 ```
 
 **Example:**
 ```bash
-# Convert hsdd2.csv: pressure in col 2, energy in col 3, from CGS units
+# Via pip
+tovx-converter hsdd2.csv 2 3 4 inputCode/hsdd2.csv
+
+# From source
 python -m tovextravaganza.converter hsdd2.csv 2 3 4 inputCode/hsdd2.csv
 ```
 
