@@ -12,7 +12,7 @@ def read_file(filename):
 
 setup(
     name='tovextravaganza',
-    version='1.1.0',
+    version='1.1.1',
     author='Hosein Gholami',
     author_email='mohogholami@gmail.com',
     description='Python toolkit for solving the Tolman-Oppenheimer-Volkoff (TOV) equations and exploring neutron star properties',
