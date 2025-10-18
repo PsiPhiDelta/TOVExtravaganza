@@ -188,13 +188,13 @@ class RadialProfiler:
                         'data': all_cols_data
                     }
         
-        # Step 3: Adaptive refinement to guarantee accuracy < 0.05 M☉
-        if best_profile and best_diff > 0.05:
+        # Step 3: Adaptive refinement to guarantee accuracy < 0.01 M☉
+        if best_profile and best_diff > 0.01:
             print(f"  Refining search (initial error: {best_diff:.4f} M☉)...")
             # Narrow search around best_p_c
-            p_low = best_p_c * 0.8
-            p_high = best_p_c * 1.2
-            refine_pressures = np.logspace(np.log10(p_low), np.log10(p_high), 50)
+            p_low = best_p_c * 0.9
+            p_high = best_p_c * 1.1
+            refine_pressures = np.logspace(np.log10(p_low), np.log10(p_high), 100)
             
             for p_c in refine_pressures:
                 r_arr, M_arr, all_cols_data = self.compute_profile(p_c)
@@ -217,8 +217,8 @@ class RadialProfiler:
             R_final = best_profile['r'][-1]
             M_final = best_profile['M'][-1] / MSUN_TO_KM
             error = abs(M_final - target_mass_Msun)
-            if error > 0.05:
-                print(f"WARNING: Could not find star within 0.05 M☉ (error: {error:.4f} M☉)")
+            if error > 0.01:
+                print(f"WARNING: Could not find star within 0.01 M☉ (error: {error:.4f} M☉)")
             print(f"Found star closest to M={target_mass_Msun:.3f} M☉: M={M_final:.4f} M☉, R={R_final:.2f} km (error: {error:.4f} M☉, M_max={M_max:.3f} M☉)")
         
         return best_profile
@@ -294,13 +294,13 @@ class RadialProfiler:
                         'data': all_cols_data
                     }
         
-        # Step 3: Adaptive refinement to guarantee accuracy < 0.1 km
-        if best_profile and best_diff > 0.1:
+        # Step 3: Adaptive refinement to guarantee accuracy < 0.01 km
+        if best_profile and best_diff > 0.01:
             print(f"  Refining search (initial error: {best_diff:.4f} km)...")
             # Narrow search around best_p_c
-            p_low = best_p_c * 0.8
-            p_high = best_p_c * 1.2
-            refine_pressures = np.logspace(np.log10(p_low), np.log10(p_high), 50)
+            p_low = best_p_c * 0.9
+            p_high = best_p_c * 1.1
+            refine_pressures = np.logspace(np.log10(p_low), np.log10(p_high), 100)
             
             for p_c in refine_pressures:
                 r_arr, M_arr, all_cols_data = self.compute_profile(p_c)
@@ -323,8 +323,8 @@ class RadialProfiler:
             R_final = best_profile['r'][-1]
             M_final = best_profile['M'][-1] / MSUN_TO_KM
             error = abs(R_final - target_radius_km)
-            if error > 0.1:
-                print(f"WARNING: Could not find star within 0.1 km (error: {error:.4f} km)")
+            if error > 0.01:
+                print(f"WARNING: Could not find star within 0.01 km (error: {error:.4f} km)")
             print(f"Found star closest to R={target_radius_km:.2f} km: R={R_final:.2f} km, M={M_final:.4f} M☉ (error: {error:.4f} km, M_max={M_max:.3f} M☉)")
         
         return best_profile
