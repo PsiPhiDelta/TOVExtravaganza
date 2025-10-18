@@ -438,6 +438,16 @@ class RadialProfiler:
             R_all = np.array([prof['r'][-1] for prof in profiles])
             M_all = np.array([prof['M'][-1] / MSUN_TO_KM for prof in profiles])  # Convert to M☉
         
+        # Find M_max to separate stable/unstable branches
+        M_max_idx = np.argmax(M_all)
+        M_max = M_all[M_max_idx]
+        
+        # Split into stable and unstable branches
+        R_stable = R_all[:M_max_idx+1]
+        M_stable = M_all[:M_max_idx+1]
+        R_unstable = R_all[M_max_idx:]
+        M_unstable = M_all[M_max_idx:]
+        
         for i, prof in enumerate(profiles):
             r_arr = prof['r']
             M_arr = prof['M']
