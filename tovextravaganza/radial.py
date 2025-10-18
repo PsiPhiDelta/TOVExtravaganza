@@ -84,87 +84,29 @@ class RadialProfiler:
     
     def compute_full_mr_curve(self, num_points=100):
         """
-        Compute full M-R curve for visualization using adaptive sampling.
-        oh boy oh boy, smart algorithm makes it faster AND smoother!
-        
-        Uses adaptive refinement:
-        - More points where curve changes rapidly (low M, near M_max)
-        - Fewer points where curve is smooth
-        - Stops at M_max (stable branch only)
-        
+        Compute full M-R curve for visualization.
+        oh boy oh boy, more stars!
         Filters out unphysical stars (R >= 99 km or M < 0.05 Msun).
         """
         p_table = self.eos.data_dict["p"]
         p_min = p_table[0]
         p_max = p_table[-1]
         
-        # Step 1: Coarse sampling to find M_max and stable range (faster!)
-        coarse_p = np.logspace(np.log10(p_min), np.log10(p_max), 20)
-        R_coarse = []
-        M_coarse = []
-        p_coarse = []
-        M_max = 0
+        central_pressures = np.logspace(np.log10(p_min), np.log10(p_max), num_points)
         
-        for p_c in coarse_p:
+        R_list = []
+        M_list = []
+        
+        for p_c in central_pressures:
             r_arr, M_arr, _ = self.compute_profile(p_c)
+            
+            # Apply same filter: R < 99 km and M > 0.05 Msun
             R_final = r_arr[-1] if len(r_arr) > 0 else 0
             M_final = M_arr[-1] / MSUN_TO_KM if len(M_arr) > 0 else 0
             
             if len(r_arr) > 0 and M_arr[-1] > 0 and R_final < 99.0 and M_final > 0.05:
-                R_coarse.append(R_final)
-                M_coarse.append(M_final)
-                p_coarse.append(p_c)
-                if M_final > M_max:
-                    M_max = M_final
-                elif M_final < 0.95 * M_max:  # Entered unstable, stop!
-                    break
-        
-        if len(M_coarse) < 3:
-            # Not enough points, return what we have
-            return np.array(R_coarse), np.array(M_coarse)
-        
-        # Step 2: Adaptive refinement - add points where curvature is high
-        R_list = list(R_coarse)
-        M_list = list(M_coarse)
-        p_list = list(p_coarse)
-        
-        i = 0
-        while i < len(M_list) - 1:
-            # Compute curvature indicator (change in slope)
-            if i > 0:
-                dM1 = M_list[i] - M_list[i-1]
-                dR1 = R_list[i] - R_list[i-1]
-                dM2 = M_list[i+1] - M_list[i]
-                dR2 = R_list[i+1] - R_list[i]
-                
-                # Curvature ~ change in dM/dR
-                slope1 = dM1 / (dR1 + 1e-10)
-                slope2 = dM2 / (dR2 + 1e-10)
-                curvature = abs(slope2 - slope1)
-                
-                # Also check mass difference
-                mass_gap = abs(M_list[i+1] - M_list[i])
-                
-                # Refine if high curvature OR large mass gap
-                if curvature > 0.5 or mass_gap > 0.15:
-                    # Add midpoint
-                    p_mid = np.sqrt(p_list[i] * p_list[i+1])
-                    r_arr, M_arr, _ = self.compute_profile(p_mid)
-                    R_final = r_arr[-1] if len(r_arr) > 0 else 0
-                    M_final = M_arr[-1] / MSUN_TO_KM if len(M_arr) > 0 else 0
-                    
-                    if len(r_arr) > 0 and M_arr[-1] > 0 and R_final < 99.0 and M_final > 0.05:
-                        R_list.insert(i+1, R_final)
-                        M_list.insert(i+1, M_final)
-                        p_list.insert(i+1, p_mid)
-                        # Don't increment i, check this segment again
-                        continue
-            
-            i += 1
-            
-            # Safety: don't create too many points
-            if len(M_list) > num_points:
-                break
+                R_list.append(R_final)
+                M_list.append(M_final)
         
         return np.array(R_list), np.array(M_list)
     
