@@ -4,6 +4,28 @@ All notable changes to TOV Extravaganza.
 
 ---
 
+## [1.2.0] - 2025-10-18
+
+### Changed
+- **Package reorganization**: Restructured into `core/`, `cli/`, `utils/` subdirectories
+  - `core/` - Reusable business logic classes (EOS, TOVSolver, TidalCalculator, etc.)
+  - `cli/` - Command-line interface tools (tov, radial, converter)
+  - `utils/` - Utility scripts (wizard, demo, help_command)
+- Cleaner, more professional package structure following Python best practices
+
+### Improved
+- Search accuracy now guarantees 0.01 M☉ error (was 0.05 M☉)
+- Radius search accuracy 0.01 km (was 0.1 km)
+- Better M > M_max error handling (returns None instead of silently using wrong value)
+
+### Added
+- Dashed lines for unstable branch in radial profile M-R diagrams
+- M_max display in radial profile plot titles
+- DEVELOPMENT.md guide for contributors
+- Consolidated documentation (4 .md files instead of 8)
+
+---
+
 ## [1.1.2] - 2025-10-18
 
 ### Added
