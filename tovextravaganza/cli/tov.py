@@ -23,11 +23,11 @@ import matplotlib.pyplot as plt
 # your file is *already* in those sweet dimensionless code units.
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# Now we use the fancy object-oriented modules from src/!
-from src.eos import EOS
-from src.tov_solver import TOVSolver
-from src.tidal_calculator import TidalCalculator
-from src.output_handlers import MassRadiusWriter, TidalWriter
+# Now we use the fancy object-oriented modules!
+from ..core.eos import EOS
+from ..core.tov_solver import TOVSolver
+from ..core.tidal_calculator import TidalCalculator
+from ..core.output_handlers import MassRadiusWriter, TidalWriter
 
 # Use this constant to convert from code units to solar masses:
 Msun_in_code = 1.4766  # 1 Msun = 1.4766 (G=c=1) length units
@@ -127,7 +127,7 @@ def read_eos_csv_multi(filename):
 class EOSMulti:
     """
     Backward compatibility wrapper for radial.py
-    This just wraps the new EOS class from src/
+    This wraps the EOS class for compatibility
     """
     def __init__(self, data_dict, colnames):
         self.data_dict = data_dict
@@ -138,7 +138,7 @@ class EOSMulti:
             raise ValueError("Need at least 2 data points for interpolation.")
         self.ilast = 0  # bracket index for speed
         
-        # Create the real EOS object from src/
+        # Create the real EOS object
         self._eos = EOS(data_dict, colnames)
 
     def get_value(self, colname, p):
@@ -173,7 +173,7 @@ def solve_tov_rad(central_p, eos_multi, r_max=RMAX, dr=DR):
 ###############################################################################
 def main(args=None):
     """
-    Main function - now using fancy OO modules from src/
+    Main function - using fancy OO modules
     but keeping all the comedic style you know and love!
     Now with CLI arguments for extra flexibility!
     """
@@ -198,9 +198,14 @@ SIMPLE VERSION (Most certainly you want this one!):
 
 Just add the name of your EOS file at the end, like this:
 
-  python tov.py inputCode/test.csv
-  python tov.py inputCode/hsdd2.csv
-  python tov.py inputCode/csc.csv
+  Via pip:
+    tovx inputCode/test.csv
+    tovx inputCode/hsdd2.csv
+    tovx inputCode/csc.csv
+
+  From source:
+    python -m tovextravaganza.tov inputCode/test.csv
+    python -m tovextravaganza.tov inputCode/hsdd2.csv
 
 That's it! It'll compute 200 stellar configurations (with tidal deformability!)
 and save everything to export/stars/ folder. Oh boy oh boy, so simple!
@@ -216,19 +221,21 @@ But if you are GACHI and want the ADVANCED stuff, here you go:
 ===================================================================
 
 More stars for better resolution:
-  python tov.py inputCode/hsdd2.csv -n 1000
+  tovx inputCode/hsdd2.csv -n 1000
+  python -m tovextravaganza.tov inputCode/hsdd2.csv -n 1000
 
 High precision (finer steps, like a fancy scientist):
-  python tov.py inputCode/hsdd2.csv --dr 0.0005
+  tovx inputCode/hsdd2.csv --dr 0.0005
+  python -m tovextravaganza.tov inputCode/hsdd2.csv --dr 0.0005
 
 Quiet mode (no spam, just the goods):
-  python tov.py inputCode/hsdd2.csv -q
+  tovx inputCode/hsdd2.csv -q
 
 Custom output folder (be organized, be proud):
-  python tov.py inputCode/test.csv -o export/my_awesome_results
+  tovx inputCode/test.csv -o export/my_awesome_results
 
 FULL GACHI MODE (all the bells and whistles):
-  python tov.py inputCode/hsdd2.csv -n 2000 --dr 0.0001 -q -o export/ultra
+  tovx inputCode/hsdd2.csv -n 2000 --dr 0.0001 -q -o export/ultra
 
 ===================================================================
 Output: Mass-radius sequences WITH tidal deformability (Lambda, k2)!
@@ -269,8 +276,7 @@ Output: Mass-radius sequences WITH tidal deformability (Lambda, k2)!
     print(f"  {eos.n_points} data points")
     print(f"  Columns: {', '.join(eos.colnames)}")
     
-    # Create our solver object - now from src/!
-    # With high accuracy for good tidal deformability results!
+    # Create our solver object with high accuracy for good tidal deformability results!
     rtol = getattr(args, 'rtol', DEFAULT_RTOL)
     atol = getattr(args, 'atol', DEFAULT_ATOL)
     solver = TOVSolver(eos, r_max=args.rmax, dr=args.dr, rtol=rtol, atol=atol)
@@ -314,7 +320,7 @@ Output: Mass-radius sequences WITH tidal deformability (Lambda, k2)!
             if not args.quiet:
                 print(f"Failed at p_c={p_c:.3e}: {e}")
     
-    # Use our fancy tidal writer from src/ (has all the data: M, R, Lambda, k2)
+    # Use our fancy tidal writer (has all the data: M, R, Lambda, k2)
     writer = TidalWriter(output_folder=out_folder)
     show_plot = not args.no_show and not args.no_plot
     csv_path, pdf_path = writer.write_results(tidal_results, base_name, show_plot=show_plot, save_png=args.save_png)

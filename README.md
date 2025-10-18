@@ -4,7 +4,7 @@ Welcome to **TOV Extravaganza**, your Python toolkit for solving the Tolman-Oppe
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Solve TOV equations, compute tidal deformabilities, generate radial profiles, and explore the Mass-Radius relationship of neutron stars—all with a streamlined command-line interface.
+Solve TOV equations, compute tidal deformabilities, generate radial profiles, and explore the Mass-Radius relationship of neutron stars, all with a streamlined command-line interface.
 
 ---
 
@@ -24,27 +24,32 @@ Solve TOV equations, compute tidal deformabilities, generate radial profiles, an
 
 ```
 TOVExtravaganza/
-├── src/                         # Core object-oriented modules
-│   ├── eos.py                   # EOS class for interpolation
-│   ├── tov_solver.py            # TOV equation solver
-│   ├── tidal_calculator.py      # Tidal deformability calculator
-│   └── output_handlers.py       # CSV and plot output handlers
+├── tovextravaganza/             # Main package
+│   ├── core/                    # Core logic (reusable classes)
+│   │   ├── eos.py               # EOS interpolation
+│   │   ├── tov_solver.py        # TOV equation solver
+│   │   ├── tidal_calculator.py  # Tidal deformability
+│   │   └── output_handlers.py   # Output writers
+│   ├── cli/                     # Command-line tools
+│   │   ├── tov.py               # TOV solver CLI
+│   │   ├── radial.py            # Radial profiler CLI
+│   │   └── converter.py         # EOS converter CLI
+│   └── utils/                   # Utilities
+│       ├── wizard.py            # Interactive wizard
+│       ├── demo.py              # Demo file downloader
+│       └── help_command.py      # Help command
 │
 ├── inputRaw/                    # Raw EOS data files
-├── inputCode/                   # Converted EOS in TOV code units
+├── inputCode/                   # Converted EOS (code units)
 │
 ├── export/                      # All output goes here!
 │   ├── stars/                   # TOV + Tidal results
-│   │   ├── csv/                 # p_c, R, M, Lambda, k2 data
-│   │   └── plots/               # M-R curves, Lambda(M), k2(M)
-│   └── radial_profiles/         # Internal structure data
-│       ├── json/                # Detailed radial profiles
+│   │   ├── csv/                 # M-R + Tidal data
+│   │   └── plots/               # M-R curves, Λ(M), k₂(M)
+│   └── radial_profiles/         # Internal structure
+│       ├── json/                # Detailed radial data
 │       └── plots/               # M(r) and p(r) plots
 │
-├── tov.py                       # Main TOV + Tidal solver (CLI)
-├── radial.py                    # Radial profile generator (CLI)
-├── converter.py                 # EOS unit converter (CLI + interactive)
-├── tov_wizard.py                # 🧙‍♂️ Interactive wizard (beginner-friendly!)
 └── README.md                    # This file
 ```
 
@@ -54,58 +59,129 @@ TOVExtravaganza/
 
 ### Installation
 
-Clone the repository and install dependencies:
+#### Option 1: Install from PyPI (Easiest!)
 
+**Global Install:**
 ```bash
-git clone https://github.com/yourusername/TOVExtravaganza.git
-cd TOVExtravaganza
-pip install numpy scipy matplotlib
+pip install tovextravaganza
 ```
 
-### Option 1: Interactive Wizard 🧙‍♂️ (Recommended for Beginners!)
+**Or in a Virtual Environment (Recommended):**
+```bash
+python -m venv tovenv
+source tovenv/bin/activate    # Linux/Mac, or tovenv\Scripts\activate on Windows
+pip install tovextravaganza
+```
 
-**The easiest way to get started!** Just run:
+> **⚠️ Important:** If using a venv, activate it before using any `tovx` commands!
+
+This installs the package with console commands: `tovx`, `tovx-radial`, `tovx-converter`, `tovx-wizard`, `tovx-demo`, `tovextravaganza`
+
+#### Option 2: Install from Source (For Development)
 
 ```bash
-python tov_wizard.py
+git clone https://github.com/PsiPhiDelta/TOVExtravaganza.git
+cd TOVExtravaganza
+pip install -e .
+```
+
+**Why `-e` (editable mode)?**
+- ✅ Changes to code are **immediately reflected** - no reinstall needed!
+- ✅ Perfect for development and testing
+- ✅ Runs `tovx` commands from your local modified files
+
+> **⚠️ Important:** Regular `pip install tovextravaganza` installs a copy from PyPI. If you want to modify the code, you MUST use `pip install -e .` from the cloned repo!
+
+#### Option 3: Manual (No Installation)
+
+```bash
+git clone https://github.com/PsiPhiDelta/TOVExtravaganza.git
+cd TOVExtravaganza
+pip install -r requirements.txt
+```
+
+Run scripts directly with `python -m tovextravaganza.tov`, etc.
+
+> **Note:** Without `pip install -e .`, the `tovx` commands won't be available - you must use `python -m tovextravaganza.MODULE` syntax.
+
+### Workflow 1: Interactive Wizard 🧙‍♂️ (Easiest - Recommended!)
+
+**Perfect for first-time users!** The wizard guides you through everything:
+
+**If installed via pip:**
+```bash
+tovx-demo        # Get example files
+tovx-wizard      # Run the wizard
+```
+
+**If using source/cloned repository:**
+```bash
+python -m tovextravaganza.tov_wizard
 ```
 
 The wizard will:
-- 🎯 Guide you through the entire workflow step-by-step
 - 🔍 Auto-detect your EOS files
-- ❓ Ask simple questions (no command-line knowledge needed!)
-- 🚀 Run everything for you with progress messages
-- 🎉 Tell you exactly where your results are!
+- ❓ Ask simple questions (no expertise needed!)
+- 🚀 Run everything for you
+- 📊 Show you exactly where results are
+- 🎉 Celebrate your success!
 
 **Oh boy oh boy, so easy!**
 
-### Option 2: Manual Workflow (For Power Users!)
+### Workflow 2: Command-Line (For Power Users!)
 
+**If installed via pip:**
 ```bash
-# 1. Convert your EOS to code units (interactive or CLI)
-python converter.py                              # Interactive mode
-python converter.py hsdd2.csv 2 3 4             # CLI mode
-
-# 2. Compute Mass-Radius relationship + Tidal properties
-python tov.py inputCode/hsdd2.csv
-
-# 3. Generate detailed radial profiles
-python radial.py inputCode/hsdd2.csv -M 1.4     # For 1.4 M☉ star
+tovx-demo                              # Get example files
+tovx inputCode/hsdd2.csv              # Compute M-R + Tidal
+tovx-radial inputCode/hsdd2.csv -M 1.4  # Radial profile for 1.4 M☉
+tovx-converter                         # Convert EOS units
 ```
 
-**That's it!** Your results are in the `export/` folder. Oh boy oh boy, science!
+**If using source/cloned repository:**
+```bash
+python -m tovextravaganza.tov inputCode/hsdd2.csv
+python -m tovextravaganza.radial inputCode/hsdd2.csv -M 1.4
+python -m tovextravaganza.converter
+```
+
+**That's it!** Results appear in the `export/` folder.
 
 ---
 
 ## 🎨 Showcase
 
+### Getting Started (First Time Users)
+
+**Via pip (easiest):**
+```bash
+pip install tovextravaganza
+tovx-demo        # Get example files
+tovx-wizard      # Guided workflow
+```
+
+**From source:**
+```bash
+git clone https://github.com/PsiPhiDelta/TOVExtravaganza.git
+cd TOVExtravaganza
+pip install -e .
+tovx-wizard
+```
+
+**That's it!** The wizard does everything for you!
+
 ### Mass-Radius Relationship
 
-Running `tov.py` generates beautiful M-R curves showing the full sequence of neutron star configurations:
+For advanced users, run the TOV solver directly:
 
-**Example Output:**
+**Via pip:**
 ```bash
-python tov.py inputCode/hsdd2.csv
+tovx inputCode/hsdd2.csv
+```
+
+**From source:**
+```bash
+python -m tovextravaganza.tov inputCode/hsdd2.csv
 ```
 
 Creates:
@@ -121,7 +197,7 @@ Running `radial.py` reveals the **internal structure** from center to surface:
 
 **Example Output:**
 ```bash
-python radial.py inputCode/hsdd2.csv -M 1.4 -M 2.0
+python -m tovextravaganza.radial inputCode/hsdd2.csv -M 1.4 -M 2.0
 ```
 
 Each profile shows:
@@ -147,15 +223,28 @@ Each profile shows:
 
 #### Simple Usage
 
+**Via pip:**
 ```bash
-python tov.py inputCode/hsdd2.csv           # 200 stars (default)
-python tov.py inputCode/test.csv -n 500     # 500 stars
+tovx inputCode/hsdd2.csv           # 200 stars (default)
+tovx inputCode/test.csv -n 500     # 500 stars
+```
+
+**From source:**
+```bash
+python -m tovextravaganza.tov inputCode/hsdd2.csv
+python -m tovextravaganza.tov inputCode/test.csv -n 500
 ```
 
 #### Advanced Options
 
+**Via pip:**
 ```bash
-python tov.py inputCode/hsdd2.csv \
+tovx inputCode/hsdd2.csv -n 1000 --dr 0.0001 --quiet --no-show
+```
+
+**From source:**
+```bash
+python -m tovextravaganza.tov inputCode/hsdd2.csv \
     -n 1000 \                               # Number of stars
     -o export/my_stars \                    # Custom output folder
     --dr 0.0001 \                           # Radial step size
@@ -196,16 +285,30 @@ For HS(DD2) EOS:
 
 #### Usage
 
+**Via pip:**
 ```bash
 # Generate profiles across pressure range
-python radial.py inputCode/hsdd2.csv           # 10 profiles (default)
-python radial.py inputCode/test.csv -n 20      # 20 profiles
+tovx-radial inputCode/hsdd2.csv           # 10 profiles (default)
+tovx-radial inputCode/test.csv -n 20      # 20 profiles
 
 # Generate profiles for specific mass/radius
-python radial.py inputCode/hsdd2.csv -M 1.4          # Star closest to 1.4 M☉
-python radial.py inputCode/hsdd2.csv -R 12.0         # Star closest to 12 km
-python radial.py inputCode/hsdd2.csv -M 1.4 -M 2.0   # Multiple masses
-python radial.py inputCode/hsdd2.csv -M 1.4 -R 12    # By mass AND radius
+tovx-radial inputCode/hsdd2.csv -M 1.4          # Star closest to 1.4 M☉
+tovx-radial inputCode/hsdd2.csv -R 12.0         # Star closest to 12 km
+tovx-radial inputCode/hsdd2.csv -M 1.4 -M 2.0   # Multiple masses
+tovx-radial inputCode/hsdd2.csv -M 1.4 -R 12    # By mass AND radius
+```
+
+**From source:**
+```bash
+# Generate profiles across pressure range
+python -m tovextravaganza.radial inputCode/hsdd2.csv           # 10 profiles (default)
+python -m tovextravaganza.radial inputCode/test.csv -n 20      # 20 profiles
+
+# Generate profiles for specific mass/radius
+python -m tovextravaganza.radial inputCode/hsdd2.csv -M 1.4          # Star closest to 1.4 M☉
+python -m tovextravaganza.radial inputCode/hsdd2.csv -R 12.0         # Star closest to 12 km
+python -m tovextravaganza.radial inputCode/hsdd2.csv -M 1.4 -M 2.0   # Multiple masses
+python -m tovextravaganza.radial inputCode/hsdd2.csv -M 1.4 -R 12    # By mass AND radius
 ```
 
 #### Output
@@ -241,8 +344,14 @@ python radial.py inputCode/hsdd2.csv -M 1.4 -R 12    # By mass AND radius
 
 #### Interactive Mode
 
+**Via pip:**
 ```bash
-python converter.py
+tovx-converter
+```
+
+**From source:**
+```bash
+python -m tovextravaganza.converter
 ```
 
 The script will guide you through:
@@ -253,14 +362,23 @@ The script will guide you through:
 
 #### CLI Mode
 
+**Via pip:**
 ```bash
-python converter.py <input_file> <pcol> <ecol> <system> [output_file]
+tovx-converter <input_file> <pcol> <ecol> <system> [output_file]
+```
+
+**From source:**
+```bash
+python -m tovextravaganza.converter <input_file> <pcol> <ecol> <system> [output_file]
 ```
 
 **Example:**
 ```bash
-# Convert hsdd2.csv: pressure in col 2, energy in col 3, from CGS units
-python converter.py hsdd2.csv 2 3 4 inputCode/hsdd2.csv
+# Via pip
+tovx-converter hsdd2.csv 2 3 4 inputCode/hsdd2.csv
+
+# From source
+python -m tovextravaganza.converter hsdd2.csv 2 3 4 inputCode/hsdd2.csv
 ```
 
 **Parameters:**
@@ -339,7 +457,7 @@ where `C = GM/(c²R)` is the compactness and `y_R = y(R)`.
 Using HS(DD2) EOS, we compute 200 neutron star configurations:
 
 ```bash
-python tov.py inputCode/hsdd2.csv
+python -m tovextravaganza.tov inputCode/hsdd2.csv
 ```
 
 **Result:** The M-R curve shows:
@@ -352,7 +470,7 @@ python tov.py inputCode/hsdd2.csv
 For a 1.4 M☉ star:
 
 ```bash
-python radial.py inputCode/hsdd2.csv -n 10
+python -m tovextravaganza.radial inputCode/hsdd2.csv -n 10
 ```
 
 **Result:** Radial profiles reveal:
@@ -559,3 +677,4 @@ Thanks to the astrophysics and gravitational wave communities for making neutron
 ---
 
 *Built with Python, NumPy, SciPy, and a healthy dose of enthusiasm for compact objects.*
+

@@ -5,7 +5,7 @@ Solves Tolman-Oppenheimer-Volkoff equations for neutron star structure
 import numpy as np
 import warnings
 from scipy.integrate import odeint
-from src.eos import EOS
+from .eos import EOS
 
 
 class TOVSolver:

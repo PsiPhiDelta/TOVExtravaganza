@@ -129,7 +129,7 @@ def main():
                 else:
                     print("\nRunning interactive converter...")
                 
-                run_command(['python', 'converter.py'], "EOS Converter")
+                run_command(['python', '-m', 'tovextravaganza.cli.converter'], "EOS Converter")
                 
                 # Ask user what the output file was
                 code_files = list_eos_files('inputCode')
@@ -141,7 +141,11 @@ def main():
                     return
             else:
                 print("\nOh boy oh boy! No EOS files found in inputRaw/ or inputCode/!")
-                print("Please add your EOS file to inputRaw/ first.")
+                print()
+                print("💡 First time? Get example files with:")
+                print("   tovx-demo")
+                print()
+                print("Or add your own EOS file to inputRaw/ folder.")
                 return
     elif raw_files:
         print("\nNo converted EOS files found, but I found raw files:")
@@ -149,7 +153,7 @@ def main():
             print(f"  • {f}")
         
         print("\nOh boy oh boy! Let's convert one to code units first!")
-        run_command(['python', 'converter.py'], "EOS Converter")
+        run_command(['python', '-m', 'tovextravaganza.cli.converter'], "EOS Converter")
         
         code_files = list_eos_files('inputCode')
         eos_file = choose_from_list(code_files, "Which converted file do you want to use?")
@@ -160,7 +164,11 @@ def main():
             return
     else:
         print("\nOh boy oh boy! No EOS files found anywhere!")
-        print("Please add your EOS file to inputRaw/ or inputCode/ first.")
+        print()
+        print("💡 First time? Get example files with:")
+        print("   tovx-demo")
+        print()
+        print("Or add your own EOS file to inputRaw/ or inputCode/ folder.")
         return
     
     print(f"\n✓ Using EOS file: {eos_path}")
@@ -177,7 +185,7 @@ def main():
         num_stars = input("\nNumber of stars [200]: ").strip()
         num_stars = num_stars if num_stars else "200"
         
-        cmd = ['python', 'tov.py', eos_path, '-n', num_stars, '--no-show']
+        cmd = ['python', '-m', 'tovextravaganza.tov', eos_path, '-n', num_stars, '--no-show']
         
         if run_command(cmd, f"Computing {num_stars} neutron stars"):
             print("\n✓ Results saved to export/stars/")
@@ -195,7 +203,7 @@ def main():
         choice = input("\nChoice [1]: ").strip()
         choice = choice if choice else "1"
         
-        cmd = ['python', 'radial.py', eos_path]
+        cmd = ['python', '-m', 'tovextravaganza.radial', eos_path]
         
         if choice == "1":
             num_profiles = input("\nHow many profiles? [10]: ").strip()
@@ -253,7 +261,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n\nOh boy oh boy, an error occurred: {e}")
         print("Don't worry, you can still run the scripts manually!")
-        print("  python tov.py inputCode/<your_eos>.csv")
-        print("  python radial.py inputCode/<your_eos>.csv\n")
+        print("  python -m tovextravaganza.cli.tov inputCode/<your_eos>.csv")
+        print("  python -m tovextravaganza.cli.radial inputCode/<your_eos>.csv\n")
         sys.exit(1)
 
