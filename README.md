@@ -24,27 +24,32 @@ Solve TOV equations, compute tidal deformabilities, generate radial profiles, an
 
 ```
 TOVExtravaganza/
-├── tovextravaganza/             # Core package (all Python modules)
-│   ├── eos.py                   # EOS class for interpolation
-│   ├── tov_solver.py            # TOV equation solver
-│   ├── tidal_calculator.py      # Tidal deformability calculator
-│   └── output_handlers.py       # CSV and plot output handlers
+├── tovextravaganza/             # Main package
+│   ├── core/                    # Core logic (reusable classes)
+│   │   ├── eos.py               # EOS interpolation
+│   │   ├── tov_solver.py        # TOV equation solver
+│   │   ├── tidal_calculator.py  # Tidal deformability
+│   │   └── output_handlers.py   # Output writers
+│   ├── cli/                     # Command-line tools
+│   │   ├── tov.py               # TOV solver CLI
+│   │   ├── radial.py            # Radial profiler CLI
+│   │   └── converter.py         # EOS converter CLI
+│   └── utils/                   # Utilities
+│       ├── wizard.py            # Interactive wizard
+│       ├── demo.py              # Demo file downloader
+│       └── help_command.py      # Help command
 │
 ├── inputRaw/                    # Raw EOS data files
-├── inputCode/                   # Converted EOS in TOV code units
+├── inputCode/                   # Converted EOS (code units)
 │
 ├── export/                      # All output goes here!
 │   ├── stars/                   # TOV + Tidal results
-│   │   ├── csv/                 # p_c, R, M, Lambda, k2 data
-│   │   └── plots/               # M-R curves, Lambda(M), k2(M)
-│   └── radial_profiles/         # Internal structure data
-│       ├── json/                # Detailed radial profiles
+│   │   ├── csv/                 # M-R + Tidal data
+│   │   └── plots/               # M-R curves, Λ(M), k₂(M)
+│   └── radial_profiles/         # Internal structure
+│       ├── json/                # Detailed radial data
 │       └── plots/               # M(r) and p(r) plots
 │
-├── tov.py                       # Main TOV + Tidal solver (CLI)
-├── radial.py                    # Radial profile generator (CLI)
-├── converter.py                 # EOS unit converter (CLI + interactive)
-├── tov_wizard.py                # 🧙‍♂️ Interactive wizard (beginner-friendly!)
 └── README.md                    # This file
 ```
 
