@@ -128,14 +128,48 @@ class RadialProfiler:
         p_min = p_table[0]
         p_max = p_table[-1]
         
-        # Search through pressure range
-        central_pressures = np.logspace(np.log10(p_min), np.log10(p_max), 200)
+        # Step 1: Quick coarse search to find stable branch (up to M_max)
+        # Use fewer samples for initial scan
+        coarse_pressures = np.logspace(np.log10(p_min), np.log10(p_max), 30)
+        M_values = []
+        p_stable = []
+        
+        M_max = 0
+        for p_c in coarse_pressures:
+            r_arr, M_arr, _ = self.compute_profile(p_c)
+            R_final = r_arr[-1] if len(r_arr) > 0 else 0
+            M_final = M_arr[-1] / MSUN_TO_KM if len(M_arr) > 0 else 0
+            
+            # Only consider physical stars in stable branch
+            if len(r_arr) > 0 and M_arr[-1] > 0 and R_final < 99.0 and M_final > 0.05:
+                M_values.append(M_final)
+                p_stable.append(p_c)
+                if M_final > M_max:
+                    M_max = M_final
+                elif M_final < 0.95 * M_max:  # Entered unstable branch
+                    break
+        
+        if len(M_values) == 0:
+            print(f"WARNING: No stable stars found!")
+            return None
+        
+        # Check if target is beyond M_max
+        if target_mass_Msun > M_max:
+            print(f"ERROR: Target M={target_mass_Msun:.3f} M☉ exceeds M_max={M_max:.3f} M☉")
+            print(f"       Stable stars only exist up to M_max. Please choose M < {M_max:.3f} M☉")
+            return None
+        
+        # Step 2: Fine search in stable branch only
+        p_min_stable = p_stable[0]
+        p_max_stable = p_stable[-1]
+        
+        fine_pressures = np.logspace(np.log10(p_min_stable), np.log10(p_max_stable), 100)
         
         best_p_c = None
         best_diff = float('inf')
         best_profile = None
         
-        for p_c in central_pressures:
+        for p_c in fine_pressures:
             r_arr, M_arr, all_cols_data = self.compute_profile(p_c)
             
             R_final = r_arr[-1] if len(r_arr) > 0 else 0
@@ -154,10 +188,38 @@ class RadialProfiler:
                         'data': all_cols_data
                     }
         
+        # Step 3: Adaptive refinement to guarantee accuracy < 0.01 M☉
+        if best_profile and best_diff > 0.01:
+            print(f"  Refining search (initial error: {best_diff:.4f} M☉)...")
+            # Narrow search around best_p_c
+            p_low = best_p_c * 0.9
+            p_high = best_p_c * 1.1
+            refine_pressures = np.logspace(np.log10(p_low), np.log10(p_high), 100)
+            
+            for p_c in refine_pressures:
+                r_arr, M_arr, all_cols_data = self.compute_profile(p_c)
+                R_final = r_arr[-1] if len(r_arr) > 0 else 0
+                M_final = M_arr[-1] / MSUN_TO_KM if len(M_arr) > 0 else 0
+                
+                if len(r_arr) > 0 and M_arr[-1] > 0 and R_final < 99.0 and M_final > 0.05:
+                    diff = abs(M_final - target_mass_Msun)
+                    if diff < best_diff:
+                        best_diff = diff
+                        best_p_c = p_c
+                        best_profile = {
+                            'p_c': p_c,
+                            'r': r_arr,
+                            'M': M_arr,
+                            'data': all_cols_data
+                        }
+        
         if best_profile:
             R_final = best_profile['r'][-1]
             M_final = best_profile['M'][-1] / MSUN_TO_KM
-            print(f"Found star closest to M={target_mass_Msun:.3f} M☉: M={M_final:.4f} M☉, R={R_final:.2f} km")
+            error = abs(M_final - target_mass_Msun)
+            if error > 0.01:
+                print(f"WARNING: Could not find star within 0.01 M☉ (error: {error:.4f} M☉)")
+            print(f"Found star closest to M={target_mass_Msun:.3f} M☉: M={M_final:.4f} M☉, R={R_final:.2f} km (error: {error:.4f} M☉, M_max={M_max:.3f} M☉)")
         
         return best_profile
     
@@ -179,14 +241,41 @@ class RadialProfiler:
         p_min = p_table[0]
         p_max = p_table[-1]
         
-        # Search through pressure range
-        central_pressures = np.logspace(np.log10(p_min), np.log10(p_max), 200)
+        # Step 1: Quick coarse search to find stable branch (up to M_max)
+        coarse_pressures = np.logspace(np.log10(p_min), np.log10(p_max), 30)
+        M_values = []
+        p_stable = []
+        
+        M_max = 0
+        for p_c in coarse_pressures:
+            r_arr, M_arr, _ = self.compute_profile(p_c)
+            R_final = r_arr[-1] if len(r_arr) > 0 else 0
+            M_final = M_arr[-1] / MSUN_TO_KM if len(M_arr) > 0 else 0
+            
+            # Only consider physical stars in stable branch
+            if len(r_arr) > 0 and M_arr[-1] > 0 and R_final < 99.0 and M_final > 0.05:
+                M_values.append(M_final)
+                p_stable.append(p_c)
+                if M_final > M_max:
+                    M_max = M_final
+                elif M_final < 0.95 * M_max:  # Entered unstable branch
+                    break
+        
+        if len(M_values) == 0:
+            print(f"WARNING: No stable stars found!")
+            return None
+        
+        # Step 2: Fine search in stable branch only
+        p_min_stable = p_stable[0]
+        p_max_stable = p_stable[-1]
+        
+        fine_pressures = np.logspace(np.log10(p_min_stable), np.log10(p_max_stable), 100)
         
         best_p_c = None
         best_diff = float('inf')
         best_profile = None
         
-        for p_c in central_pressures:
+        for p_c in fine_pressures:
             r_arr, M_arr, all_cols_data = self.compute_profile(p_c)
             
             R_final = r_arr[-1] if len(r_arr) > 0 else 0
@@ -205,10 +294,38 @@ class RadialProfiler:
                         'data': all_cols_data
                     }
         
+        # Step 3: Adaptive refinement to guarantee accuracy < 0.01 km
+        if best_profile and best_diff > 0.01:
+            print(f"  Refining search (initial error: {best_diff:.4f} km)...")
+            # Narrow search around best_p_c
+            p_low = best_p_c * 0.9
+            p_high = best_p_c * 1.1
+            refine_pressures = np.logspace(np.log10(p_low), np.log10(p_high), 100)
+            
+            for p_c in refine_pressures:
+                r_arr, M_arr, all_cols_data = self.compute_profile(p_c)
+                R_final = r_arr[-1] if len(r_arr) > 0 else 0
+                M_final = M_arr[-1] / MSUN_TO_KM if len(M_arr) > 0 else 0
+                
+                if len(r_arr) > 0 and M_arr[-1] > 0 and R_final < 99.0 and M_final > 0.05:
+                    diff = abs(R_final - target_radius_km)
+                    if diff < best_diff:
+                        best_diff = diff
+                        best_p_c = p_c
+                        best_profile = {
+                            'p_c': p_c,
+                            'r': r_arr,
+                            'M': M_arr,
+                            'data': all_cols_data
+                        }
+        
         if best_profile:
             R_final = best_profile['r'][-1]
             M_final = best_profile['M'][-1] / MSUN_TO_KM
-            print(f"Found star closest to R={target_radius_km:.2f} km: R={R_final:.2f} km, M={M_final:.4f} M☉")
+            error = abs(R_final - target_radius_km)
+            if error > 0.01:
+                print(f"WARNING: Could not find star within 0.01 km (error: {error:.4f} km)")
+            print(f"Found star closest to R={target_radius_km:.2f} km: R={R_final:.2f} km, M={M_final:.4f} M☉ (error: {error:.4f} km, M_max={M_max:.3f} M☉)")
         
         return best_profile
     
@@ -321,6 +438,16 @@ class RadialProfiler:
             R_all = np.array([prof['r'][-1] for prof in profiles])
             M_all = np.array([prof['M'][-1] / MSUN_TO_KM for prof in profiles])  # Convert to M☉
         
+        # Find M_max to separate stable/unstable branches
+        M_max_idx = np.argmax(M_all)
+        M_max = M_all[M_max_idx]
+        
+        # Split into stable and unstable branches
+        R_stable = R_all[:M_max_idx+1]
+        M_stable = M_all[:M_max_idx+1]
+        R_unstable = R_all[M_max_idx:]
+        M_unstable = M_all[M_max_idx:]
+        
         for i, prof in enumerate(profiles):
             r_arr = prof['r']
             M_arr = prof['M']
@@ -346,11 +473,14 @@ class RadialProfiler:
             ax1.grid(True, alpha=0.3)
             
             # Right: M-R diagram with this star marked
-            ax2.plot(R_all, M_all, 'k-', linewidth=1.5, alpha=0.5, label='M-R curve')
+            # Plot stable branch (solid) and unstable branch (dashed)
+            ax2.plot(R_stable, M_stable, 'k-', linewidth=1.5, alpha=0.7, label='Stable branch')
+            if len(R_unstable) > 1:
+                ax2.plot(R_unstable, M_unstable, 'k--', linewidth=1.5, alpha=0.5, label='Unstable branch')
             ax2.plot(R_final, M_final, 'r*', markersize=20, label=f'This star: R={R_final:.2f} km, M={M_final:.3f} M☉')
             ax2.set_xlabel("R [km]", fontsize=12)
             ax2.set_ylabel("M [M☉]", fontsize=12)
-            ax2.set_title("Mass-Radius Relation", fontsize=12)
+            ax2.set_title(f"Mass-Radius Relation (M_max={M_max:.3f} M☉)", fontsize=12)
             ax2.grid(True, alpha=0.3)
             ax2.legend(fontsize=10)
             
@@ -373,11 +503,14 @@ class RadialProfiler:
             ax1.grid(True, alpha=0.3)
             
             # Right: M-R diagram with this star marked
-            ax2.plot(R_all, M_all, 'k-', linewidth=1.5, alpha=0.5, label='M-R curve')
+            # Plot stable branch (solid) and unstable branch (dashed)
+            ax2.plot(R_stable, M_stable, 'k-', linewidth=1.5, alpha=0.7, label='Stable branch')
+            if len(R_unstable) > 1:
+                ax2.plot(R_unstable, M_unstable, 'k--', linewidth=1.5, alpha=0.5, label='Unstable branch')
             ax2.plot(R_final, M_final, 'r*', markersize=20, label=f'This star: R={R_final:.2f} km, M={M_final:.3f} M☉')
             ax2.set_xlabel("R [km]", fontsize=12)
             ax2.set_ylabel("M [M☉]", fontsize=12)
-            ax2.set_title("Mass-Radius Relation", fontsize=12)
+            ax2.set_title(f"Mass-Radius Relation (M_max={M_max:.3f} M☉)", fontsize=12)
             ax2.grid(True, alpha=0.3)
             ax2.legend(fontsize=10)
             

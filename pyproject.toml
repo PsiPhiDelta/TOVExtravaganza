@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tovextravaganza"
-version = "1.1.2"
+version = "1.2.1"
 description = "Python toolkit for solving the Tolman-Oppenheimer-Volkoff (TOV) equations and exploring neutron star properties"
 readme = "README.md"
 authors = [
@@ -46,13 +46,13 @@ Repository = "https://github.com/PsiPhiDelta/TOVExtravaganza"
 "Bug Reports" = "https://github.com/PsiPhiDelta/TOVExtravaganza/issues"
 
 [project.scripts]
-tovx = "tovextravaganza.tov:main"
-tovx-radial = "tovextravaganza.radial:main"
-tovx-converter = "tovextravaganza.converter:main"
-tovx-wizard = "tovextravaganza.tov_wizard:main"
-tovx-demo = "tovextravaganza.demo:main"
-tovextravaganza = "tovextravaganza.help_command:main"
+tovx = "tovextravaganza.cli.tov:main"
+tovx-radial = "tovextravaganza.cli.radial:main"
+tovx-converter = "tovextravaganza.cli.converter:main"
+tovx-wizard = "tovextravaganza.utils.wizard:main"
+tovx-demo = "tovextravaganza.utils.demo:main"
+tovextravaganza = "tovextravaganza.utils.help_command:main"
 
 [tool.setuptools]
-packages = ["tovextravaganza"]
+packages = {find = {}}  # Automatically discover all packages
 
