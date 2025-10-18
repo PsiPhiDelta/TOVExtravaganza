@@ -56,11 +56,21 @@ TOVExtravaganza/
 
 #### Option 1: Install from PyPI (Easiest!)
 
+**Global Install:**
 ```bash
 pip install tovextravaganza
 ```
 
-This installs the package with console commands: `tovx`, `tovx-radial`, `tovx-converter`, `tovx-wizard`
+**Or in a Virtual Environment (Recommended):**
+```bash
+python -m venv tovenv
+source tovenv/bin/activate    # Linux/Mac, or tovenv\Scripts\activate on Windows
+pip install tovextravaganza
+```
+
+> **⚠️ Important:** If using a venv, activate it before using any `tovx` commands!
+
+This installs the package with console commands: `tovx`, `tovx-radial`, `tovx-converter`, `tovx-wizard`, `tovx-demo`, `tovextravaganza`
 
 #### Option 2: Install from Source
 
@@ -629,3 +639,4 @@ Thanks to the astrophysics and gravitational wave communities for making neutron
 ---
 
 *Built with Python, NumPy, SciPy, and a healthy dose of enthusiasm for compact objects.*
+
