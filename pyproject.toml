@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tovextravaganza"
-version = "1.1.2"
+version = "1.2.0"
 description = "Python toolkit for solving the Tolman-Oppenheimer-Volkoff (TOV) equations and exploring neutron star properties"
 readme = "README.md"
 authors = [
