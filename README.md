@@ -4,7 +4,7 @@ Welcome to **TOV Extravaganza**, your Python toolkit for solving the Tolman-Oppe
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Solve TOV equations, compute tidal deformabilities, generate radial profiles, and explore the Mass-Radius relationship of neutron stars—all with a streamlined command-line interface.
+Solve TOV equations, compute tidal deformabilities, generate radial profiles, and explore the Mass-Radius relationship of neutron stars, all with a streamlined command-line interface.
 
 ---
 
@@ -54,56 +54,107 @@ TOVExtravaganza/
 
 ### Installation
 
-Clone the repository and install dependencies:
+#### Option 1: Install from PyPI (Easiest!)
 
 ```bash
-git clone https://github.com/yourusername/TOVExtravaganza.git
-cd TOVExtravaganza
-pip install numpy scipy matplotlib
+pip install tovextravaganza
 ```
 
-### Option 1: Interactive Wizard 🧙‍♂️ (Recommended for Beginners!)
+This installs the package with console commands: `tovx`, `tovx-radial`, `tovx-converter`, `tovx-wizard`
 
-**The easiest way to get started!** Just run:
+#### Option 2: Install from Source
 
+```bash
+git clone https://github.com/PsiPhiDelta/TOVExtravaganza.git
+cd TOVExtravaganza
+pip install -e .
+```
+
+#### Option 3: Manual Installation
+
+```bash
+git clone https://github.com/PsiPhiDelta/TOVExtravaganza.git
+cd TOVExtravaganza
+pip install -r requirements.txt
+```
+
+Run scripts directly with `python tov.py`, etc.
+
+### Workflow 1: Interactive Wizard 🧙‍♂️ (Easiest - Recommended!)
+
+**Perfect for first-time users!** The wizard guides you through everything:
+
+**If installed via pip:**
+```bash
+tovx-demo        # Get example files
+tovx-wizard      # Run the wizard
+```
+
+**If using source/cloned repository:**
 ```bash
 python tov_wizard.py
 ```
 
 The wizard will:
-- 🎯 Guide you through the entire workflow step-by-step
 - 🔍 Auto-detect your EOS files
-- ❓ Ask simple questions (no command-line knowledge needed!)
-- 🚀 Run everything for you with progress messages
-- 🎉 Tell you exactly where your results are!
+- ❓ Ask simple questions (no expertise needed!)
+- 🚀 Run everything for you
+- 📊 Show you exactly where results are
+- 🎉 Celebrate your success!
 
 **Oh boy oh boy, so easy!**
 
-### Option 2: Manual Workflow (For Power Users!)
+### Workflow 2: Command-Line (For Power Users!)
 
+**If installed via pip:**
 ```bash
-# 1. Convert your EOS to code units (interactive or CLI)
-python converter.py                              # Interactive mode
-python converter.py hsdd2.csv 2 3 4             # CLI mode
-
-# 2. Compute Mass-Radius relationship + Tidal properties
-python tov.py inputCode/hsdd2.csv
-
-# 3. Generate detailed radial profiles
-python radial.py inputCode/hsdd2.csv -M 1.4     # For 1.4 M☉ star
+tovx-demo                              # Get example files
+tovx inputCode/hsdd2.csv              # Compute M-R + Tidal
+tovx-radial inputCode/hsdd2.csv -M 1.4  # Radial profile for 1.4 M☉
+tovx-converter                         # Convert EOS units
 ```
 
-**That's it!** Your results are in the `export/` folder. Oh boy oh boy, science!
+**If using source/cloned repository:**
+```bash
+python tov.py inputCode/hsdd2.csv
+python radial.py inputCode/hsdd2.csv -M 1.4
+python converter.py
+```
+
+**That's it!** Results appear in the `export/` folder.
 
 ---
 
 ## 🎨 Showcase
 
+### Getting Started (First Time Users)
+
+**Via pip (easiest):**
+```bash
+pip install tovextravaganza
+tovx-demo        # Get example files
+tovx-wizard      # Guided workflow
+```
+
+**From source:**
+```bash
+git clone https://github.com/PsiPhiDelta/TOVExtravaganza.git
+cd TOVExtravaganza
+python tov_wizard.py
+```
+
+**That's it!** The wizard does everything for you!
+
 ### Mass-Radius Relationship
 
-Running `tov.py` generates beautiful M-R curves showing the full sequence of neutron star configurations:
+For advanced users, run the TOV solver directly:
 
-**Example Output:**
+**Via pip:**
+```bash
+tovx inputCode/hsdd2.csv
+```
+
+**From source:**
 ```bash
 python tov.py inputCode/hsdd2.csv
 ```
@@ -147,13 +198,26 @@ Each profile shows:
 
 #### Simple Usage
 
+**Via pip:**
 ```bash
-python tov.py inputCode/hsdd2.csv           # 200 stars (default)
-python tov.py inputCode/test.csv -n 500     # 500 stars
+tovx inputCode/hsdd2.csv           # 200 stars (default)
+tovx inputCode/test.csv -n 500     # 500 stars
+```
+
+**From source:**
+```bash
+python tov.py inputCode/hsdd2.csv
+python tov.py inputCode/test.csv -n 500
 ```
 
 #### Advanced Options
 
+**Via pip:**
+```bash
+tovx inputCode/hsdd2.csv -n 1000 --dr 0.0001 --quiet --no-show
+```
+
+**From source:**
 ```bash
 python tov.py inputCode/hsdd2.csv \
     -n 1000 \                               # Number of stars
@@ -241,6 +305,12 @@ python radial.py inputCode/hsdd2.csv -M 1.4 -R 12    # By mass AND radius
 
 #### Interactive Mode
 
+**Via pip:**
+```bash
+tovx-converter
+```
+
+**From source:**
 ```bash
 python converter.py
 ```
