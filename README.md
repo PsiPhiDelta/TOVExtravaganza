@@ -24,7 +24,7 @@ Solve TOV equations, compute tidal deformabilities, generate radial profiles, an
 
 ```
 TOVExtravaganza/
-├── src/                         # Core object-oriented modules
+├── tovextravaganza/             # Core package (all Python modules)
 │   ├── eos.py                   # EOS class for interpolation
 │   ├── tov_solver.py            # TOV equation solver
 │   ├── tidal_calculator.py      # Tidal deformability calculator
