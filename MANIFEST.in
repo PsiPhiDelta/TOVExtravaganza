@@ -1,0 +1,25 @@
+# Include important files
+include README.md
+include LICENSE
+include CHANGELOG.md
+include RELEASE_NOTES.md
+include CITATION.cff
+include pyproject.toml
+include setup.py
+
+# Include example data
+recursive-include inputCode *.csv
+recursive-include inputRaw *.csv
+
+# Exclude unnecessary files
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * .DS_Store
+recursive-exclude export *
+recursive-exclude maxwellConstructorEoS *
+recursive-exclude ToCSV *
+recursive-exclude plotting *
+recursive-exclude radial *
+exclude .gitignore
+exclude README_preview.html
+

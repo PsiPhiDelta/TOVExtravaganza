@@ -141,7 +141,11 @@ def main():
                     return
             else:
                 print("\nOh boy oh boy! No EOS files found in inputRaw/ or inputCode/!")
-                print("Please add your EOS file to inputRaw/ first.")
+                print()
+                print("💡 First time? Get example files with:")
+                print("   tovx-demo")
+                print()
+                print("Or add your own EOS file to inputRaw/ folder.")
                 return
     elif raw_files:
         print("\nNo converted EOS files found, but I found raw files:")
@@ -160,7 +164,11 @@ def main():
             return
     else:
         print("\nOh boy oh boy! No EOS files found anywhere!")
-        print("Please add your EOS file to inputRaw/ or inputCode/ first.")
+        print()
+        print("💡 First time? Get example files with:")
+        print("   tovx-demo")
+        print()
+        print("Or add your own EOS file to inputRaw/ or inputCode/ folder.")
         return
     
     print(f"\n✓ Using EOS file: {eos_path}")

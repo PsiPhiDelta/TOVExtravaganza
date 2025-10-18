@@ -4,8 +4,8 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
-# We import from "tov.py" for backward compatibility
-from tov import read_eos_csv_multi, EOSMulti, solve_tov_rad, DR, RMAX
+# We import from "tov" for backward compatibility
+from .tov import read_eos_csv_multi, EOSMulti, solve_tov_rad, DR, RMAX
 
 ###############################################################################
 # UNIT SYSTEM EXPLANATION

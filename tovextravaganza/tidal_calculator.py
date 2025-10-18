@@ -5,7 +5,7 @@ Computes tidal Love numbers and deformability for neutron stars
 import numpy as np
 import warnings
 from scipy.integrate import odeint
-from src.tov_solver import TOVSolver
+from .tov_solver import TOVSolver
 
 
 class TidalCalculator:

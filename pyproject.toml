@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tovextravaganza"
+version = "1.1.0"
+description = "Python toolkit for solving the Tolman-Oppenheimer-Volkoff (TOV) equations and exploring neutron star properties"
+readme = "README.md"
+authors = [
+    {name = "Hosein Gholami", email = "mohogholami@gmail.com"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+keywords = ["neutron-stars", "tov", "equation-of-state", "tidal-deformability", "gravitational-waves", "astrophysics"]
+requires-python = ">=3.7"
+dependencies = [
+    "numpy>=1.19.0",
+    "scipy>=1.5.0",
+    "matplotlib>=3.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-cov>=2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/PsiPhiDelta/TOVExtravaganza"
+Documentation = "https://github.com/PsiPhiDelta/TOVExtravaganza#readme"
+Repository = "https://github.com/PsiPhiDelta/TOVExtravaganza"
+"Bug Reports" = "https://github.com/PsiPhiDelta/TOVExtravaganza/issues"
+
+[project.scripts]
+tovx = "tovextravaganza.tov:main"
+tovx-radial = "tovextravaganza.radial:main"
+tovx-converter = "tovextravaganza.converter:main"
+tovx-wizard = "tovextravaganza.tov_wizard:main"
+tovx-demo = "tovextravaganza.demo:main"
+tovextravaganza = "tovextravaganza.help_command:main"
+
+[tool.setuptools]
+packages = ["tovextravaganza"]
+
