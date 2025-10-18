@@ -473,11 +473,14 @@ class RadialProfiler:
             ax1.grid(True, alpha=0.3)
             
             # Right: M-R diagram with this star marked
-            ax2.plot(R_all, M_all, 'k-', linewidth=1.5, alpha=0.5, label='M-R curve')
+            # Plot stable branch (solid) and unstable branch (dashed)
+            ax2.plot(R_stable, M_stable, 'k-', linewidth=1.5, alpha=0.7, label='Stable branch')
+            if len(R_unstable) > 1:
+                ax2.plot(R_unstable, M_unstable, 'k--', linewidth=1.5, alpha=0.5, label='Unstable branch')
             ax2.plot(R_final, M_final, 'r*', markersize=20, label=f'This star: R={R_final:.2f} km, M={M_final:.3f} M☉')
             ax2.set_xlabel("R [km]", fontsize=12)
             ax2.set_ylabel("M [M☉]", fontsize=12)
-            ax2.set_title("Mass-Radius Relation", fontsize=12)
+            ax2.set_title(f"Mass-Radius Relation (M_max={M_max:.3f} M☉)", fontsize=12)
             ax2.grid(True, alpha=0.3)
             ax2.legend(fontsize=10)
             
