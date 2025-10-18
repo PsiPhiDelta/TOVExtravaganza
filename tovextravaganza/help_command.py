@@ -3,12 +3,15 @@ TOV Extravaganza Help Command
 Shows quick start and usage information
 """
 
+from . import __version__
+
 def main():
     """Display help and usage information"""
     
     print()
     print("=" * 70)
-    print("  TOV Extravaganza - Neutron Star Physics Toolkit")
+    print(f"  TOV Extravaganza - Neutron Star Physics Toolkit")
+    print(f"  Version {__version__}")
     print("=" * 70)
     print()
     print("QUICK START:")
