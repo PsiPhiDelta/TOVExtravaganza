@@ -36,9 +36,9 @@ pip install -e .
 ### 4. Make Your Changes
 
 Edit any file in `tovextravaganza/`:
-- `tovextravaganza/tov.py` - TOV solver
-- `tovextravaganza/radial.py` - Radial profiles
-- `tovextravaganza/tidal_calculator.py` - Tidal calculations
+- `tovextravaganza/cli/tov.py` - TOV solver CLI
+- `tovextravaganza/cli/radial.py` - Radial profiles CLI
+- `tovextravaganza/core/tidal_calculator.py` - Tidal calculations
 - etc.
 
 ### 5. Test Your Changes
@@ -98,18 +98,21 @@ git push origin my-feature
 TOVExtravaganza/
 ├── tovextravaganza/           # Main package
 │   ├── __init__.py            # Package initialization
-│   ├── tov.py                 # TOV solver (CLI entry point)
-│   ├── radial.py              # Radial profiler (CLI entry point)
-│   ├── converter.py           # EOS converter (CLI entry point)
-│   ├── tov_wizard.py          # Interactive wizard
-│   ├── demo.py                # Demo file downloader
-│   ├── help_command.py        # Help command
-│   ├── eos.py                 # EOS class (interpolation)
-│   ├── tov_solver.py          # TOV solver core logic
-│   ├── tidal_calculator.py    # Tidal deformability
-│   └── output_handlers.py     # CSV/plot writers
-├── inputCode/                 # Example EOS files (code units)
-├── inputRaw/                  # Example raw EOS files
+│   ├── core/                  # Core logic (reusable classes)
+│   │   ├── eos.py             # EOS interpolation
+│   │   ├── tov_solver.py      # TOV equation solver
+│   │   ├── tidal_calculator.py # Tidal deformability
+│   │   └── output_handlers.py # CSV/plot writers
+│   ├── cli/                   # CLI tools
+│   │   ├── tov.py             # TOV solver CLI
+│   │   ├── radial.py          # Radial profiler CLI
+│   │   └── converter.py       # EOS converter CLI
+│   └── utils/                 # Utilities
+│       ├── wizard.py          # Interactive wizard
+│       ├── demo.py            # Demo downloader
+│       └── help_command.py    # Help command
+├── inputCode/                 # Example EOS files
+├── inputRaw/                  # Raw EOS files
 ├── setup.py                   # Package configuration
 ├── pyproject.toml             # Modern Python packaging
 └── README.md                  # Documentation
@@ -119,19 +122,19 @@ TOVExtravaganza/
 
 ## Key Classes
 
-### EOS (`tovextravaganza/eos.py`)
+### EOS (`tovextravaganza/core/eos.py`)
 - Loads and interpolates EOS data
 - Methods: `get_energy_density(p)`, `get_all_columns(p)`
 
-### TOVSolver (`tovextravaganza/tov_solver.py`)
+### TOVSolver (`tovextravaganza/core/tov_solver.py`)
 - Solves TOV equations
 - Returns `NeutronStar` objects with M, R, profiles
 
-### TidalCalculator (`tovextravaganza/tidal_calculator.py`)
+### TidalCalculator (`tovextravaganza/core/tidal_calculator.py`)
 - Computes tidal deformability (Λ, k₂)
 - Integrates coupled TOV-tidal equations
 
-### RadialProfiler (`tovextravaganza/radial.py`)
+### RadialProfiler (`tovextravaganza/cli/radial.py`)
 - Generates detailed radial profiles
 - Finds stars by target M or R
 
@@ -141,7 +144,7 @@ TOVExtravaganza/
 
 ### Example: Add a new EOS table format
 
-1. Modify `tovextravaganza/eos.py`:
+1. Modify `tovextravaganza/core/eos.py`:
 ```python
 def load_new_format(self, filename):
     # Your loading logic
@@ -150,7 +153,7 @@ def load_new_format(self, filename):
 
 2. Test immediately:
 ```bash
-python -m tovextravaganza.tov my_new_eos.csv
+python -m tovextravaganza.cli.tov my_new_eos.csv
 ```
 
 3. No reinstall needed with `pip install -e .`!
