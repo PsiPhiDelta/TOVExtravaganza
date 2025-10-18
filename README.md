@@ -102,7 +102,7 @@ tovx-wizard      # Run the wizard
 
 **If using source/cloned repository:**
 ```bash
-python tov_wizard.py
+python -m tovextravaganza.tov_wizard
 ```
 
 The wizard will:
@@ -126,9 +126,9 @@ tovx-converter                         # Convert EOS units
 
 **If using source/cloned repository:**
 ```bash
-python tov.py inputCode/hsdd2.csv
-python radial.py inputCode/hsdd2.csv -M 1.4
-python converter.py
+python -m tovextravaganza.tov inputCode/hsdd2.csv
+python -m tovextravaganza.radial inputCode/hsdd2.csv -M 1.4
+python -m tovextravaganza.converter
 ```
 
 **That's it!** Results appear in the `export/` folder.
@@ -150,7 +150,8 @@ tovx-wizard      # Guided workflow
 ```bash
 git clone https://github.com/PsiPhiDelta/TOVExtravaganza.git
 cd TOVExtravaganza
-python tov_wizard.py
+pip install -e .
+tovx-wizard
 ```
 
 **That's it!** The wizard does everything for you!
@@ -182,7 +183,7 @@ Running `radial.py` reveals the **internal structure** from center to surface:
 
 **Example Output:**
 ```bash
-python radial.py inputCode/hsdd2.csv -M 1.4 -M 2.0
+python -m tovextravaganza.radial inputCode/hsdd2.csv -M 1.4 -M 2.0
 ```
 
 Each profile shows:
