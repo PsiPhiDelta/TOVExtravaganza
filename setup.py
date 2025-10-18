@@ -24,7 +24,7 @@ setup(
         'Source': 'https://github.com/PsiPhiDelta/TOVExtravaganza',
         'Documentation': 'https://github.com/PsiPhiDelta/TOVExtravaganza#readme',
     },
-    packages=['tovextravaganza'],
+    packages=find_packages(),
     package_data={
         'tovextravaganza': ['../inputCode/*.csv', '../inputRaw/*.csv'],
     },
