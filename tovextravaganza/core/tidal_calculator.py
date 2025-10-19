@@ -32,67 +32,60 @@ class TidalCalculator:
     def _tov_tidal_equations(self, y, r):
         """
         Combined TOV + tidal perturbation equations.
+        Second-order formulation: integrates H and beta = dH/dr.
         
         Parameters:
         -----------
         y : array
-            [M, p, H] where H = r*beta
+            [M, p, H, beta]
         r : float
             Radial coordinate
             
         Returns:
         --------
         array
-            [dM/dr, dp/dr, dH/dr]
+            [dM/dr, dp/dr, dH/dr, d(beta)/dr]
         """
-        M, p, H = y
+        M, p, H, beta = y
         
         if p <= 0.0:
-            return [0.0, 0.0, 0.0]
+            return [0.0, 0.0, 0.0, 0.0]
         
         e = self.eos.get_energy_density(p)
         
-        # TOV equations
+        # TOV equations (match form in tov_solver.py)
         dMdr = 4.0 * np.pi * r * r * e
-        denom = r * (r - 2.0 * M) + 1e-30
-        dpdr = -((e + p) * (M + 4.0 * np.pi * r**3 * p)) / denom
         
-        # Tidal perturbation equation
-        if r < 1e-8:
-            # Near center: H ~ 2r^2, so dH/dr ~ 4r
-            dHdr = 4.0 * r
+        if r < 1e-10:
+            dpdr = 0.0
         else:
-            m_over_r = M / (r + 1e-30)
-            
-            # Sound speed squared: cs2 = dp/de
-            dp_small = max(1e-8 * abs(p), 1e-20)
-            p_plus = min(p + dp_small, self.eos.p_table[-1])
-            p_minus = max(p - dp_small, self.eos.p_table[0])
-            e_plus = self.eos.get_energy_density(p_plus)
-            e_minus = self.eos.get_energy_density(p_minus)
-            de = e_plus - e_minus
-            dp = p_plus - p_minus
-            
-            if abs(de) > 1e-30:
-                cs2 = dp / de
-            else:
-                cs2 = 1.0
-            
-            cs2 = np.clip(cs2, 0.01, 1.0)
-            
-            y_val = H / r
-            F1 = 1.0 - 2.0 * m_over_r
-            
-            # Tidal ODE coefficients
-            A = (1.0 - 4.0 * np.pi * r**2 * (e - p)) / F1
-            B = (4.0 * np.pi * r * (5.0 * e + 9.0 * p + (e + p) / cs2)) / F1
-            B += (-6.0 / (r * F1))
-            B += (2.0 * m_over_r / (r * F1))**2
-            B += (2.0 * m_over_r / (r**2 * F1)) * (1.0 + 4.0 * np.pi * r**2 * (e - p))
-            
-            dHdr = y_val * A + H * B / r
+            tmp = 1.0 - 2.0 * M / r
+            dpdr = -((e + p) * (M / (r * r) + 4.0 * np.pi * r * p)) / tmp
         
-        return [dMdr, dpdr, dHdr]
+        # Tidal: dH/dr = beta
+        dHdr = beta
+        
+        # Tidal: d(beta)/dr - exact match to their code
+        # f = de/dp = 1/cs2 (use precomputed fdedp, matches their getF())
+        f = self.eos.get_fdedp(p)
+        f = max(1.0, f)  # Only lower bound, NO upper clip!
+        
+        F1 = 1.0 - 2.0 * M / r
+        
+        # Their exact d(beta)/dr formula:
+        term1 = (2.0 / F1) * H * (
+            -2.0 * np.pi * (5.0 * e + 9.0 * p + f * (e + p)) +
+            3.0 / (r * r) +
+            (2.0 / F1) * (M / (r * r) + 4.0 * np.pi * r * p)**2
+        )
+        
+        term2 = (2.0 * beta / r / F1) * (
+            -1.0 + M / r + 2.0 * np.pi * r * r * (e - p)
+        )
+        
+        dbetadr = term1 + term2
+        
+        return [dMdr, dpdr, dHdr, dbetadr]
     
     def compute(self, central_p):
         """
@@ -111,18 +104,21 @@ class TidalCalculator:
              'compactness': C}
         """
         # Start from small r > 0 to avoid H=0 trap
+        # Use dr=0.001 for tidal (their rstep value)
         r_start = 1e-5
-        r_vals = np.arange(r_start, self.r_max + self.dr, self.dr)
+        dr_tidal = 0.001
+        r_vals = np.arange(r_start, self.r_max + dr_tidal, dr_tidal)
         
-        # Initial conditions at r_start
-        y0 = [0.0, central_p, 2.0 * r_start**2]
+        # Initial conditions at r_start: [M, p, H, beta]
+        # H ~ r^2, beta = dH/dr ~ 2r near center
+        y0 = [0.0, central_p, r_start**2, 2.0 * r_start]
         
         # Integrate with error handling
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             try:
                 sol = odeint(self._tov_tidal_equations, y0, r_vals,
-                           args=(), rtol=self.rtol, atol=self.atol)
+                           args=(), rtol=1e-8, atol=1e-10)
                 if w:
                     for warning in w:
                         print(f"  Tidal Warning (p_c={central_p:.3e}): {warning.message}")
@@ -133,9 +129,12 @@ class TidalCalculator:
         M_sol = sol[:, 0]
         p_sol = sol[:, 1]
         H_sol = sol[:, 2]
+        beta_sol = sol[:, 3]
         
-        # Find surface
-        idx_surface = np.where(p_sol <= 0.0)[0]
+        # Find surface (where p drops to minimum EOS pressure)
+        # Stop at pressure[0] to avoid extrapolating outside EOS table
+        p_min = self.eos.p_table[0]
+        idx_surface = np.where(p_sol <= p_min)[0]
         if len(idx_surface) > 0:
             i_surf = idx_surface[0]
         else:
@@ -157,7 +156,11 @@ class TidalCalculator:
             }
         
         # Compute Love number k2
-        y_R = H_R / R
+        # Use beta from integration (exact, not numerical derivative)
+        beta_R = beta_sol[i_surf]
+        
+        # y = r * beta / H (matches their solver exactly)
+        y_R = R * beta_R / (H_R + 1e-30)
         
         C2 = C * C
         C3 = C2 * C
