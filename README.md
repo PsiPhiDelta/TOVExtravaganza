@@ -17,10 +17,13 @@
 - **Interactive Wizard** 🧙‍♂️ – Beginner-friendly guided workflow (just answer questions!)
 - **Mass-Radius Calculations** – Solve TOV equations for multiple central pressures
 - **Tidal Deformability** – Compute dimensionless tidal deformability (Λ) and Love number (k₂)
-- **Batch Processing** 🚀 **NEW!** – Process multiple EOS files in parallel using all CPU cores
+- **Batch Processing** 🚀 **NEW!** – Process multiple EOS files in parallel:
+  - **Converter Batch**: Convert all raw EOS files with any columns preserved
+  - **TOV Batch**: Compute M-R curves for multiple EOS simultaneously  
+  - **Radial Batch**: Generate radial profiles for multiple EOS in parallel
 - **Radial Profiles** – Generate detailed internal structure profiles with M-R context
 - **Target-Specific Profiles** – Find stars by exact mass or radius values
-- **EOS Converter** – Convert raw equation of state data into TOV code units (CLI + interactive)
+- **EOS Converter** – Convert raw equation of state data into TOV code units (preserves all columns!)
 - **Clean Output** – Organized export structure with CSV data and publication-ready plots
 
 ---
@@ -221,6 +224,158 @@ Each profile shows:
 
 ---
 
+## 🚀 Batch Processing Mode – Process Multiple Files in Parallel
+
+**NEW!** All TOVExtravaganza tools now support batch processing to analyze multiple EOS files simultaneously using parallel workers.
+
+### Overview
+
+Process entire directories of EOS files with a single command:
+- **Converter Batch**: Convert all raw EOS files to code units
+- **TOV Batch**: Compute M-R curves for all EOS files
+- **Radial Batch**: Generate radial profiles for all EOS files
+
+### 1. Converter Batch – Convert Multiple EOS Files
+
+Convert all raw EOS files in a directory with proper unit conversion.
+
+**Via pip:**
+```bash
+# Basic batch conversion (MeV*fm^-3 by default)
+tovx-converter --batch inputRaw/
+
+# Specify unit system and columns
+tovx-converter --batch inputRaw/ --pcol 2 --ecol 3 --system 4  # CGS
+
+# Custom workers and output
+tovx-converter --batch inputRaw/ --workers 4 --output inputCode
+```
+
+**From source:**
+```bash
+python -m tovextravaganza.converter --batch inputRaw/ --system 2 --workers 4
+```
+
+**Features:**
+- ✅ Preserves ALL additional columns (mu, n, temperature, phase labels, etc.)
+- ✅ Maintains header tags with "(code_units)" annotations
+- ✅ Reorders columns: p & e first (converted), then rest (preserved)
+- ✅ Handles different column structures automatically
+
+**Example Output:**
+```
+======================================================================
+BATCH CONVERTER MODE - oh boy oh boy!
+======================================================================
+Found 3 CSV files in inputRaw
+Processing with 2 parallel workers
+
+Processed 3 files in 0.60 seconds
+  ✓ Successful: 3
+
+csc.csv      => 1042 lines (MeV^-4 => code)
+hsdd2.csv    =>  401 lines (CGS => code)
+test.csv     =>  500 lines (Already code)
+======================================================================
+```
+
+### 2. TOV Batch – Mass-Radius Sequences for Multiple EOS
+
+Compute M-R curves and tidal deformability for all EOS files in parallel.
+
+**Via pip:**
+```bash
+# Process all CSV files in a directory
+tovx --batch inputCode/
+
+# Specify number of workers and stars
+tovx --batch inputCode/ --workers 4 -n 500
+```
+
+**From source:**
+```bash
+python -m tovextravaganza.tov --batch inputCode/ --workers 8 -n 200
+```
+
+**Example Output:**
+```
+======================================================================
+BATCH PROCESSING MODE - oh boy oh boy!
+======================================================================
+Found 3 CSV files in inputCode
+Processing with 24 parallel workers
+
+Processed 3 files in 16.15 seconds
+  ✓ Successful: 3
+
+csc                  =>  149 solutions, Max M = 1.1186 Msun
+hsdd2                =>  151 solutions, Max M = 2.4229 Msun
+test                 =>  140 solutions, Max M = 1.8730 Msun
+======================================================================
+```
+
+### 3. Radial Batch – Internal Profiles for Multiple EOS
+
+Generate radial profiles for all EOS files in parallel.
+
+**Via pip:**
+```bash
+# Process all files in a directory
+tovx-radial --batch inputCode/
+
+# Custom number of profiles and workers
+tovx-radial --batch inputCode/ -n 10 --workers 4
+```
+
+**From source:**
+```bash
+python -m tovextravaganza.radial --batch inputCode/ -n 5 --workers 2
+```
+
+**Output Structure:**
+```
+export/radial_profiles/
+├── csc/
+│   ├── json/
+│   └── plots/
+├── hsdd2/
+│   ├── json/
+│   └── plots/
+└── test/
+    ├── json/
+    └── plots/
+```
+
+### Performance Benefits
+
+- **Parallel Processing**: Uses all CPU cores by default (configurable with `--workers`)
+- **Time Savings**: ~45% faster with 2 workers, scales with more cores
+- **Robust Error Handling**: Individual file failures don't stop the batch
+- **Organized Output**: Each EOS gets its own folder (for radial profiles)
+
+### Common Options
+
+All batch modes support:
+- `--batch <directory>`: Directory containing CSV files
+- `--workers <N>`: Number of parallel workers (default: CPU count)
+- `-o, --output <dir>`: Output directory
+- `-n, --num-stars <N>`: Number of stars/profiles (TOV & radial)
+
+### Complete Workflow Example
+
+```bash
+# Step 1: Convert all raw EOS files to code units
+tovx-converter --batch inputRaw/ --system 2 --workers 4
+
+# Step 2: Compute M-R sequences for all converted EOS
+tovx --batch inputCode/ -n 200 --workers 8
+
+# Step 3: Generate radial profiles for all EOS
+tovx-radial --batch inputCode/ -n 10 --workers 8
+```
+
+---
+
 ## 📖 Usage Guide
 
 ### 1. tov.py – Mass-Radius & Tidal Deformability
@@ -259,70 +414,6 @@ python -m tovextravaganza.tov inputCode/hsdd2.csv \
     --no-plot \                             # Skip plot generation
     --no-show                               # Don't display plot (still saves)
 ```
-
-#### Batch Processing Mode 🚀 NEW!
-
-**Process multiple EOS files in parallel!** Perfect for analyzing many equations of state at once.
-
-**Via pip:**
-```bash
-# Process all CSV files in a directory with all CPU cores
-tovx --batch inputCode/
-
-# Specify number of parallel workers
-tovx --batch inputCode/ --workers 4
-
-# Combine with other options
-tovx --batch inputCode/ -n 500 -o export/batch_results --workers 8
-```
-
-**From source:**
-```bash
-# Process all files in parallel
-python -m tovextravaganza.tov --batch inputCode/
-
-# Custom workers and settings
-python -m tovextravaganza.tov --batch inputCode/ --workers 4 -n 500
-```
-
-**Performance Benefits:**
-- Automatically uses all CPU cores (configurable with `--workers`)
-- Processes files independently in parallel
-- Shows comprehensive summary with statistics for each file
-- Gracefully handles errors in individual files without stopping the batch
-
-**Example Output:**
-```
-======================================================================
-BATCH PROCESSING MODE - oh boy oh boy!
-======================================================================
-Found 3 CSV files in inputCode
-Processing with 24 parallel workers
-Output directory: export/stars
-Stars per file: 200
-======================================================================
-
-======================================================================
-BATCH PROCESSING COMPLETE!
-======================================================================
-
-Processed 3 files in 16.15 seconds
-  ✓ Successful: 3
-  ✗ Failed: 0
-
-======================================================================
-SUCCESSFUL FILES:
-======================================================================
-  csc                  =>  149 solutions, Max M = 1.1186 Msun
-  hsdd2                =>  151 solutions, Max M = 2.4229 Msun
-  test                 =>  140 solutions, Max M = 1.8730 Msun
-
-======================================================================
-All results saved to: export/stars
-======================================================================
-```
-
----
 
 #### Output
 
