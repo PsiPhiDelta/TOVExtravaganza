@@ -109,19 +109,25 @@ class EOS:
             ncols = len(raw_data[0])
             header = ["p", "e"] + [f"col{i}" for i in range(2, ncols)]
         else:
-            # Normalize header names: map pressure/epsilon variations to p/e
+            # Normalize header names: map pressure/epsilon variations to p/e (ONLY for first 2 columns)
             normalized_header = []
-            for h in header:
+            p_found = False
+            e_found = False
+            
+            for i, h in enumerate(header):
                 h_lower = h.lower().strip()
-                # Handle pressure variations
-                if 'pressure' in h_lower or h_lower == 'p':
+                clean_name = h.replace('(code_units)', '').replace('(code units)', '').strip()
+                
+                # Only map first pressure column to 'p'
+                if not p_found and ('pressure' in h_lower and 'symmetry' not in h_lower):
                     normalized_header.append('p')
-                # Handle energy/epsilon variations  
-                elif 'epsilon' in h_lower or 'energy' in h_lower or h_lower == 'e':
+                    p_found = True
+                # Only map first epsilon/energy column to 'e' (but not symmetry_energy, etc.)
+                elif not e_found and (('epsilon' in h_lower) or (h_lower == 'e') or ('energy_density' in h_lower) or (h_lower == 'energy')):
                     normalized_header.append('e')
+                    e_found = True
                 else:
-                    # Keep original name but remove (code_units) suffix
-                    clean_name = h.replace('(code_units)', '').replace('(code units)', '').strip()
+                    # Keep original name cleaned
                     normalized_header.append(clean_name)
             
             header = normalized_header
