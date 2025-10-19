@@ -4,6 +4,29 @@ All notable changes to TOV Extravaganza.
 
 ---
 
+## [1.4.0] - 2025-10-19
+
+### Added
+- **Central Column Values in TOV Output** 🎯 – Track ALL EOS columns at central pressure!
+  - Automatically includes central values for all additional EOS columns (mu, n, temperature, phase, etc.)
+  - Supports both numeric (interpolated) and string columns (nearest value)
+  - Dynamic CSV headers: `central_<column_name>` for each additional column
+  - Example: EOS with muB and phase_index → output includes `central_muB` and `central_phase_index`
+  
+- **Batch Processing for Unit Converter** 🚀 – Convert multiple EOS files in parallel!
+  - `tovx-converter --batch inputRaw/` processes all files in parallel
+  - Preserves ALL additional columns (strings, floats, whatever!)
+  - Configurable unit systems and column mappings
+  - Example: 3 files (1943 lines) converted in 0.60 seconds
+
+### Improved
+- Enhanced EOS reader with better commented header detection
+- Automatic header normalization (pressure/epsilon → p/e)
+- Support for mixed-type columns (numeric + string)
+- Column name cleanup (removes "(code_units)" suffixes)
+
+---
+
 ## [1.3.1] - 2025-10-19
 
 ### Added
