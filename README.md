@@ -266,18 +266,34 @@ Process **multiple EOS files in parallel** for high-throughput analysis.
 
 ### Scenario: Analyze 6 Quark Matter EOS Models
 
-You have 6 raw EOS files in `inputRaw/Batch/` with different parameters (CSC and RGNJL series from [arXiv:2411.04064](https://arxiv.org/abs/2411.04064)). The RGNJL tables are from the [RG-NJL-EoS-tables](https://github.com/marcohof/RG-NJL-EoS-tables) repository. Let's process them all efficiently.
+Analyze 6 EOS files with color-superconducting quark matter (CSC and RGNJL series from [arXiv:2411.04064](https://arxiv.org/abs/2411.04064)). The RGNJL tables are from the [RG-NJL-EoS-tables](https://github.com/marcohof/RG-NJL-EoS-tables) repository.
 
-### Step 1: Batch Convert to Code Units
+### Step 0: Get Batch Example Files
 
-Convert all 6 files simultaneously:
+The batch files are **included with `tovx-demo`**:
+
+```bash
+tovx-demo
+```
+
+This downloads **18 files** total:
+- 3 basic examples: `test.csv`, `hsdd2.csv`, `csc.csv`
+- 6 batch EOS in `inputCode/Batch/` (ready to use in code units)
+- 6 raw batch EOS in `inputRaw/batch/` (for unit conversion tutorials)
+- 3 raw versions in `inputRaw/`
+
+### Step 1: Batch Convert to Code Units (Optional)
+
+**Note:** Batch files are already in `inputCode/Batch/`, so you can skip to Step 2. This step is only if you want to practice unit conversion.
+
+Convert all 6 raw batch files simultaneously:
 
 ```bash
 # Via pip
-tovx-converter --batch inputRaw/Batch/ --pcol 2 --ecol 1 --system 3 --workers 6
+tovx-converter --batch inputRaw/batch/ --pcol 2 --ecol 1 --system 3 --workers 6
 
 # From source
-python -m tovextravaganza.cli.converter --batch inputRaw/Batch/ --pcol 2 --ecol 1 --system 3 --workers 6
+python -m tovextravaganza.cli.converter --batch inputRaw/batch/ --pcol 2 --ecol 1 --system 3 --workers 6
 ```
 
 **Parameters:**
