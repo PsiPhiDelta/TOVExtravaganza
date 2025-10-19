@@ -12,17 +12,21 @@ def read_file(filename):
 
 setup(
     name='tovextravaganza',
-    version='1.2.1',
+    version='1.3.0',
     author='Hosein Gholami',
     author_email='mohogholami@gmail.com',
-    description='Python toolkit for solving the Tolman-Oppenheimer-Volkoff (TOV) equations and exploring neutron star properties',
+    description='Python toolkit for solving TOV equations, calculating tidal deformability, and exploring neutron star properties for gravitational wave and nuclear astrophysics research',
     long_description=read_file('README.md'),
     long_description_content_type='text/markdown',
     url='https://github.com/PsiPhiDelta/TOVExtravaganza',
     project_urls={
+        'Homepage': 'https://github.com/PsiPhiDelta/TOVExtravaganza',
         'Bug Reports': 'https://github.com/PsiPhiDelta/TOVExtravaganza/issues',
-        'Source': 'https://github.com/PsiPhiDelta/TOVExtravaganza',
+        'Source Code': 'https://github.com/PsiPhiDelta/TOVExtravaganza',
         'Documentation': 'https://github.com/PsiPhiDelta/TOVExtravaganza#readme',
+        'Changelog': 'https://github.com/PsiPhiDelta/TOVExtravaganza/blob/main/CHANGELOG.md',
+        'arXiv Paper': 'https://arxiv.org/abs/2411.04064',
+        'Cite': 'https://github.com/PsiPhiDelta/TOVExtravaganza/blob/main/CITATION.cff',
     },
     packages=find_packages(),
     package_data={
@@ -65,7 +69,7 @@ setup(
         'Programming Language :: Python :: 3.12',
         'Operating System :: OS Independent',
     ],
-    keywords='neutron-stars tov equation-of-state tidal-deformability gravitational-waves astrophysics',
+    keywords='neutron-stars neutron-star tov tov-equations tov-equation equation-of-state eos tidal-deformability gravitational-waves astrophysics astronomy compact-objects GW170817 love-number mass-radius general-relativity nuclear-physics nuclear-astrophysics stellar-structure binary-neutron-stars ligo virgo python-physics computational-astrophysics color-superconductivity superconductivity csc cfl quark-matter dense-matter phase-transitions qcd relativistic-stars scipy numpy computational-physics scientific-computing',
     license='MIT',
 )
 
