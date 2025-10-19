@@ -12,7 +12,7 @@ def read_file(filename):
 
 setup(
     name='tovextravaganza',
-    version='1.5.1',
+    version='1.5.2',
     author='Hosein Gholami',
     author_email='mohogholami@gmail.com',
     description='Python toolkit for solving TOV equations, calculating tidal deformability, and exploring neutron star properties for gravitational wave and nuclear astrophysics research',
@@ -30,7 +30,12 @@ setup(
     },
     packages=find_packages(),
     package_data={
-        'tovextravaganza': ['../inputCode/*.csv', '../inputRaw/*.csv'],
+        'tovextravaganza': [
+            '../inputCode/*.csv',
+            '../inputRaw/*.csv',
+            '../inputRaw/batch/*.csv',
+            '../inputCode/Batch/*.csv',
+        ],
     },
     python_requires='>=3.7',
     install_requires=[

@@ -4,6 +4,26 @@ All notable changes to TOV Extravaganza.
 
 ---
 
+## [1.5.2] - 2025-10-20
+
+### Added
+- **Batch EOS Files in Demo** 🎁
+  - `tovx-demo` now downloads all 6 batch EOS files (CSC + RGNJL series)
+  - Includes both raw (`inputRaw/batch/`) and code-unit (`inputCode/Batch/`) versions
+  - Perfect for testing batch processing tutorials
+  - All files included in PyPI package (~200KB total)
+
+### Updated
+- **Demo Command** enhanced to copy/download batch files automatically
+- **Package Data** now includes `inputRaw/batch/` and `inputCode/Batch/` subdirectories
+- Demo messages updated to mention batch files and batch processing examples
+
+### Note
+- **Post-install messages**: Modern `pip` doesn't show post-install messages anymore
+- Run `tovextravaganza` command after installation to see quick start guide and version info
+
+---
+
 ## [1.5.1] - 2025-10-19
 
 ### Updated
