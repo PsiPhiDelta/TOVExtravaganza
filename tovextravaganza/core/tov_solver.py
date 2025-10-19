@@ -61,9 +61,14 @@ class TOVSolver:
         e = self.eos.get_energy_density(p)
         dMdr = 4.0 * np.pi * r * r * e
         
-        # Add small epsilon to prevent division by zero
-        denom = r * (r - 2.0 * M) + 1e-30
-        dpdr = -((e + p) * (M + 4.0 * np.pi * r**3 * p)) / denom
+        # dp/dr = -(e+p)(M + 4πr³p) / [r(r-2M)]
+        # Rewrite to avoid division by zero when r → 0
+        if r < 1e-10:
+            # Near center, use approximation
+            dpdr = 0.0
+        else:
+            tmp = 1.0 - 2.0 * M / r
+            dpdr = -((e + p) * (M / (r * r) + 4.0 * np.pi * r * p)) / tmp
         
         return [dMdr, dpdr]
     
@@ -85,7 +90,9 @@ class TOVSolver:
         If return_profile=True:
             (NeutronStar, r_vals, M_vals, p_vals)
         """
-        r_vals = np.arange(0.0, self.r_max + self.dr, self.dr)
+        # Start from small r > 0 (same as other solver: rstep/100)
+        r_start = 1e-12
+        r_vals = np.arange(r_start, self.r_max + self.dr, self.dr)
         y0 = [0.0, central_p]
         
         # Integrate with error handling
@@ -104,8 +111,10 @@ class TOVSolver:
         M_vals = sol[:, 0]
         p_vals = sol[:, 1]
         
-        # Find surface (where p -> 0)
-        idx_surface = np.where(p_vals <= 0.0)[0]
+        # Find surface (where p drops to minimum EOS pressure)
+        # Stop at pressure[0] to avoid extrapolating outside EOS table
+        p_min = self.eos.p_table[0]
+        idx_surface = np.where(p_vals <= p_min)[0]
         if len(idx_surface) > 0:
             i_surf = idx_surface[0]
         else:
