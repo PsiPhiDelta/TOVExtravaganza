@@ -99,6 +99,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# PyPI credentials - NEVER commit this!
+.pypirc
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -139,6 +142,10 @@ export/stars/*
 export/stars/plots/*
 !export/stars/plots/hsdd2.pdf
 !export/stars/plots/hsdd2.png
+
+# Keep overlay M-R curve plot
+!export/all_mr_curves.png
+!export/all_mr_curves.pdf
 
 # Keep first radial profile examples
 !export/radial_profiles/
