@@ -70,6 +70,7 @@ class EOS:
         """
         raw_data = []
         header = None
+        last_comment_row = None
 
         with open(filename, "r") as fin:
             reader = csv.reader(fin)
@@ -77,13 +78,12 @@ class EOS:
                 if not row:
                     continue
                 
-                # Skip comment lines but check for header
+                # Skip comment lines but save the last one (likely the header)
                 if row[0].startswith("#"):
-                    # Check if this is a header line (last comment before data)
-                    if header is None and len(row) >= 2:
-                        # Extract header from comment
+                    if len(row) >= 2:
+                        # Save this as potential header
                         cleaned_row = [row[0].lstrip('#').strip()] + [c.strip() for c in row[1:]]
-                        header = cleaned_row
+                        last_comment_row = cleaned_row
                     continue
                 
                 # Data row
@@ -91,9 +91,13 @@ class EOS:
                     # Try to detect if first row is header or data
                     try:
                         float(row[0]), float(row[1])
-                        # Numeric, so no header - create default
-                        ncols = len(row)
-                        header = ["p", "e"] + [f"col{i}" for i in range(2, ncols)]
+                        # Numeric data - use last comment as header if available
+                        if last_comment_row and len(last_comment_row) == len(row):
+                            header = last_comment_row
+                        else:
+                            # No header found, create default
+                            ncols = len(row)
+                            header = ["p", "e"] + [f"col{i}" for i in range(2, ncols)]
                         raw_data.append(row)
                     except ValueError:
                         # Non-numeric, it's a header
