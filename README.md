@@ -239,28 +239,31 @@ Process entire directories of EOS files with a single command:
 
 Convert all raw EOS files in a directory with proper unit conversion.
 
-**Via pip:**
+**Interactive Mode** (prompts for columns and units if not provided):
 ```bash
-# Basic batch conversion (MeV*fm^-3 by default)
+# Via pip
 tovx-converter --batch inputRaw/
 
-# Specify unit system and columns
-tovx-converter --batch inputRaw/ --pcol 2 --ecol 3 --system 4  # CGS
-
-# Custom workers and output
-tovx-converter --batch inputRaw/ --workers 4 --output inputCode
+# From source
+python -m tovextravaganza.converter --batch inputRaw/
 ```
 
-**From source:**
+**Non-Interactive Mode** (all parameters specified):
 ```bash
-python -m tovextravaganza.converter --batch inputRaw/ --system 2 --workers 4
+# Via pip
+tovx-converter --batch inputRaw/ --pcol 2 --ecol 1 --system 3  # fm^-4
+
+# From source  
+python -m tovextravaganza.converter --batch inputRaw/ --pcol 2 --ecol 3 --system 4 --workers 4
 ```
 
 **Features:**
+- 🎯 **Interactive prompts** when parameters not provided
+- 📁 **Auto-creates** `inputCode/Batch/` for batch folders
+- ⚙️ **Parallel processing** for multiple files
 - ✅ Preserves ALL additional columns (mu, n, temperature, phase labels, etc.)
 - ✅ Maintains header tags with "(code_units)" annotations
 - ✅ Reorders columns: p & e first (converted), then rest (preserved)
-- ✅ Handles different column structures automatically
 
 **Example Output:**
 ```
@@ -433,9 +436,9 @@ p_c,R,M_code,M_solar,Lambda,k2
 #### Example Output
 
 For HS(DD2) EOS:
-- **Maximum Mass:** ~2.4 M☉
-- **Λ @ 1.4 M☉:** ~300 (dimensionless)
-- **Radius @ 1.4 M☉:** ~13 km
+- **Maximum Mass:** ~2.42 M☉
+- **Λ @ 1.4 M☉:** ~705 (dimensionless)
+- **Radius @ 1.4 M☉:** ~13.26 km
 
 ---
 
@@ -555,10 +558,11 @@ python -m tovextravaganza.converter hsdd2.csv 2 3 4 inputCode/hsdd2.csv
 
 | System | Pressure Units | Energy Density Units |
 |--------|---------------|----------------------|
-| 1 | MeV fm⁻³ | MeV fm⁻³ |
-| 2 | fm⁻⁴ | fm⁻⁴ |
-| 3 | MeV⁴ | MeV⁴ |
-| 4 | CGS (dyn/cm²) | CGS (g/cm³) |
+| 0 | Code units | Code units |
+| 1 | MeV⁻⁴ | MeV⁻⁴ |
+| 2 | MeV·fm⁻³ | MeV·fm⁻³ |
+| 3 | fm⁻⁴ | fm⁻⁴ |
+| 4 | CGS (dyn/cm²) | CGS (erg/cm³) |
 
 ---
 
@@ -622,9 +626,9 @@ python -m tovextravaganza.tov inputCode/hsdd2.csv
 ```
 
 **Result:** The M-R curve shows:
-- Stable branch reaching M_max ≈ 2.4 M☉
-- Typical 1.4 M☉ star has R ≈ 13 km
-- Tidal deformability Λ(1.4 M☉) ≈ 300
+- Stable branch reaching M_max ≈ 2.42 M☉
+- Typical 1.4 M☉ star has R ≈ 13.26 km
+- Tidal deformability Λ(1.4 M☉) ≈ 705
 
 ### Internal Structure
 
