@@ -12,19 +12,22 @@ class EOS:
     Handles multi-column EOS data in TOV code units.
     """
     
-    def __init__(self, data_dict, colnames):
+    def __init__(self, data_dict, colnames, string_dict=None):
         """
         Initialize EOS from data dictionary.
         
         Parameters:
         -----------
         data_dict : dict
-            Dictionary with column names as keys, numpy arrays as values
+            Dictionary with column names as keys, numpy arrays as values (numeric columns)
         colnames : list
             List of column names in order
+        string_dict : dict or None
+            Dictionary with column names as keys, lists of strings as values (string columns)
         """
         self.data_dict = data_dict
         self.colnames = colnames
+        self.string_dict = string_dict if string_dict is not None else {}
         self.p_table = data_dict["p"]
         self.n_points = len(self.p_table)
         
@@ -47,8 +50,8 @@ class EOS:
         --------
         EOS instance
         """
-        data_dict, colnames = cls._read_csv(filename)
-        return cls(data_dict, colnames)
+        data_dict, colnames, string_dict = cls._read_csv(filename)
+        return cls(data_dict, colnames, string_dict)
     
     @staticmethod
     def _read_csv(filename):
@@ -64,18 +67,36 @@ class EOS:
         """
         raw_data = []
         header = None
+        potential_headers = []  # Collect potential headers from comments
 
         with open(filename, "r") as fin:
             reader = csv.reader(fin)
             for row in reader:
-                if (not row) or row[0].startswith("#"):
+                if not row:
                     continue
+                
+                # Check for commented lines
+                if row[0].startswith("#"):
+                    # Save as potential header if it looks like column names
+                    if len(row) >= 2 and header is None:
+                        # Remove # from first element
+                        cleaned_row = [row[0].lstrip('#').strip()] + row[1:]
+                        potential_headers.append(cleaned_row)
+                    continue
+                
                 # Check if we have a header yet
                 if header is None:
                     # Try parsing first 2 columns as float
                     try:
                         float(row[0]), float(row[1])
-                        # No exception => numeric => no header
+                        # No exception => numeric data row
+                        # Check if we collected any potential headers
+                        if potential_headers:
+                            # Use the last potential header that matches the number of columns
+                            for pot_header in reversed(potential_headers):
+                                if len(pot_header) == len(row):
+                                    header = pot_header
+                                    break
                         raw_data.append(row)
                     except ValueError:
                         # Not numeric => treat as header
@@ -87,37 +108,79 @@ class EOS:
         if header is None:
             ncols = len(raw_data[0])
             header = ["p", "e"] + [f"col{i}" for i in range(2, ncols)]
+        else:
+            # Normalize header names: map pressure/epsilon variations to p/e
+            normalized_header = []
+            for h in header:
+                h_lower = h.lower().strip()
+                # Handle pressure variations
+                if 'pressure' in h_lower or h_lower == 'p':
+                    normalized_header.append('p')
+                # Handle energy/epsilon variations  
+                elif 'epsilon' in h_lower or 'energy' in h_lower or h_lower == 'e':
+                    normalized_header.append('e')
+                else:
+                    # Keep original name but remove (code_units) suffix
+                    clean_name = h.replace('(code_units)', '').replace('(code units)', '').strip()
+                    normalized_header.append(clean_name)
+            
+            header = normalized_header
 
-        # Parse data into float arrays
+        # Parse data - separate numeric and string columns
         columns = [[] for _ in header]
+        column_types = [None for _ in header]  # Track if numeric or string
+        
         for row in raw_data:
             if len(row) < 2:
                 continue
-            valid = True
-            vals = []
+            
+            # Try to parse each column
             for i in range(len(header)):
-                try:
-                    vals.append(float(row[i]))
-                except (IndexError, ValueError):
-                    valid = False
-                    break
-            if valid:
-                for i in range(len(header)):
-                    columns[i].append(vals[i])
-
+                if i >= len(row):
+                    continue
+                    
+                # First row: determine column type
+                if column_types[i] is None:
+                    try:
+                        float(row[i])
+                        column_types[i] = 'numeric'
+                    except ValueError:
+                        column_types[i] = 'string'
+                
+                # Add value based on type
+                if column_types[i] == 'numeric':
+                    try:
+                        columns[i].append(float(row[i]))
+                    except ValueError:
+                        columns[i].append(np.nan)  # Handle occasional bad values
+                else:
+                    columns[i].append(row[i].strip())
+        
+        # Separate numeric and string columns
         data_dict = {}
-        for h, colvals in zip(header, columns):
-            data_dict[h] = np.array(colvals, dtype=float)
-
+        string_dict = {}
+        
+        for h, colvals, coltype in zip(header, columns, column_types):
+            if coltype == 'numeric':
+                data_dict[h] = np.array(colvals, dtype=float)
+            else:
+                string_dict[h] = colvals
+        
         # Sort by ascending p
         if "p" not in data_dict:
             raise ValueError("No 'p' column found!")
 
         sort_idx = np.argsort(data_dict["p"])
+        
+        # Sort numeric columns
         for k in data_dict.keys():
             data_dict[k] = data_dict[k][sort_idx]
+        
+        # Sort string columns
+        for k in string_dict.keys():
+            string_dict[k] = [string_dict[k][i] for i in sort_idx]
 
-        return data_dict, header
+        return data_dict, header, string_dict
     
     def get_value(self, colname, p):
         """
@@ -163,6 +226,56 @@ class EOS:
     def get_energy_density(self, p):
         """Get energy density at given pressure."""
         return self.get_value("e", p)
+    
+    def get_string_value(self, colname, p):
+        """
+        Get string value at given pressure (finds nearest point).
+        
+        Parameters:
+        -----------
+        colname : str
+            String column name
+        p : float
+            Pressure value
+            
+        Returns:
+        --------
+        str
+            String value at nearest pressure point
+        """
+        if colname not in self.string_dict:
+            raise ValueError(f"Column '{colname}' is not a string column")
+        
+        # Find nearest pressure index
+        idx = np.argmin(np.abs(self.p_table - p))
+        return self.string_dict[colname][idx]
+    
+    def get_all_values_at_pressure(self, p):
+        """
+        Get all column values (numeric and string) at given pressure.
+        
+        Parameters:
+        -----------
+        p : float
+            Pressure value
+            
+        Returns:
+        --------
+        dict
+            {column_name: value} for all columns except 'p'
+        """
+        result = {}
+        
+        # Get numeric columns (interpolated)
+        for col in self.data_dict.keys():
+            if col != 'p':
+                result[col] = self.get_value(col, p)
+        
+        # Get string columns (nearest)
+        for col in self.string_dict.keys():
+            result[col] = self.get_string_value(col, p)
+        
+        return result
     
     def get_pressure_range(self):
         """Get min and max pressure in the EOS table."""
