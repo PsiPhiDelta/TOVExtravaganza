@@ -4,6 +4,9 @@ import csv
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+from multiprocessing import Pool, cpu_count
+from pathlib import Path
+import time
 
 # --------------------------------------------------------------------
 # 1) TOTALLY UNNECESSARY PHYSICAL CONSTANTS (for your amusement only)
@@ -169,6 +172,183 @@ def solve_tov_rad(central_p, eos_multi, r_max=RMAX, dr=DR):
 
 
 ###############################################################################
+# BATCH PROCESSING FUNCTIONS FOR PARALLEL EXECUTION
+###############################################################################
+def process_single_file(file_args):
+    """
+    Process a single EOS file (designed for parallel execution).
+    
+    Parameters:
+    -----------
+    file_args : tuple
+        (input_file, args_dict) where args_dict contains all processing parameters
+        
+    Returns:
+    --------
+    dict with status, filename, and results or error message
+    """
+    input_file, args_dict = file_args
+    base_name = os.path.splitext(os.path.basename(input_file))[0]
+    
+    try:
+        # Read the EOS
+        eos = EOS.from_file(input_file)
+        
+        # Create solver
+        solver = TOVSolver(
+            eos,
+            r_max=args_dict['rmax'],
+            dr=args_dict['dr'],
+            rtol=args_dict['rtol'],
+            atol=args_dict['atol']
+        )
+        
+        # Create tidal calculator
+        tidal_calc = TidalCalculator(solver)
+        
+        # Get pressure range
+        p_range = eos.get_pressure_range()
+        p_min = max(p_range[0], 1e-15)
+        p_max = p_range[1]
+        central_pressures = np.logspace(
+            np.log10(p_min),
+            np.log10(p_max),
+            args_dict['num_stars']
+        )
+        
+        # Solve for each pressure
+        tidal_results = []
+        for p_c in central_pressures:
+            try:
+                result = tidal_calc.compute(p_c)
+                result['p_c'] = p_c
+                tidal_results.append(result)
+            except Exception:
+                pass  # Skip failed solutions quietly in batch mode
+        
+        # Write results
+        out_folder = args_dict['output']
+        if not os.path.exists(out_folder):
+            os.makedirs(out_folder, exist_ok=True)
+        
+        writer = TidalWriter(output_folder=out_folder)
+        csv_path, pdf_path = writer.write_results(
+            tidal_results,
+            base_name,
+            show_plot=False,  # Never show plots in batch mode
+            save_png=args_dict.get('save_png', False)
+        )
+        
+        # Get stats
+        valid_results = [r for r in tidal_results if r['M_solar'] > 0.01]
+        max_mass = 0.0
+        if valid_results:
+            max_result = max(valid_results, key=lambda r: r['M_solar'])
+            max_mass = max_result['M_solar']
+        
+        return {
+            'status': 'success',
+            'filename': base_name,
+            'num_solutions': len(valid_results),
+            'max_mass': max_mass,
+            'csv_path': csv_path,
+            'pdf_path': pdf_path
+        }
+        
+    except Exception as e:
+        return {
+            'status': 'error',
+            'filename': base_name,
+            'error': str(e)
+        }
+
+
+def process_batch(args):
+    """
+    Process all EOS files in a directory in parallel.
+    
+    Parameters:
+    -----------
+    args : argparse.Namespace
+        Command-line arguments
+    """
+    input_dir = Path(args.batch)
+    
+    # Find all CSV files in the directory
+    csv_files = list(input_dir.glob('*.csv'))
+    
+    if not csv_files:
+        print(f"No CSV files found in directory: {input_dir}")
+        return
+    
+    print(f"\n{'='*70}")
+    print(f"BATCH PROCESSING MODE - oh boy oh boy!")
+    print(f"{'='*70}")
+    print(f"Found {len(csv_files)} CSV files in {input_dir}")
+    print(f"Processing with {args.workers} parallel workers")
+    print(f"Output directory: {args.output}")
+    print(f"Stars per file: {args.num_stars}")
+    print(f"{'='*70}\n")
+    
+    # Prepare arguments for each file
+    args_dict = {
+        'output': args.output,
+        'num_stars': args.num_stars,
+        'rmax': args.rmax,
+        'dr': args.dr,
+        'rtol': getattr(args, 'rtol', DEFAULT_RTOL),
+        'atol': getattr(args, 'atol', DEFAULT_ATOL),
+        'save_png': args.save_png
+    }
+    
+    file_args_list = [(str(f), args_dict) for f in csv_files]
+    
+    # Process files in parallel
+    start_time = time.time()
+    
+    if args.workers == 1:
+        # Sequential processing
+        results = [process_single_file(fa) for fa in file_args_list]
+    else:
+        # Parallel processing
+        with Pool(processes=args.workers) as pool:
+            results = pool.map(process_single_file, file_args_list)
+    
+    elapsed = time.time() - start_time
+    
+    # Print summary
+    print(f"\n{'='*70}")
+    print(f"BATCH PROCESSING COMPLETE!")
+    print(f"{'='*70}")
+    
+    successful = [r for r in results if r['status'] == 'success']
+    failed = [r for r in results if r['status'] == 'error']
+    
+    print(f"\nProcessed {len(results)} files in {elapsed:.2f} seconds")
+    print(f"  ✓ Successful: {len(successful)}")
+    print(f"  ✗ Failed: {len(failed)}")
+    
+    if successful:
+        print(f"\n{'='*70}")
+        print("SUCCESSFUL FILES:")
+        print(f"{'='*70}")
+        for r in successful:
+            print(f"  {r['filename']:20s} => {r['num_solutions']:4d} solutions, "
+                  f"Max M = {r['max_mass']:.4f} Msun")
+    
+    if failed:
+        print(f"\n{'='*70}")
+        print("FAILED FILES:")
+        print(f"{'='*70}")
+        for r in failed:
+            print(f"  {r['filename']:20s} => Error: {r['error']}")
+    
+    print(f"\n{'='*70}")
+    print(f"All results saved to: {args.output}")
+    print(f"{'='*70}\n")
+
+
+###############################################################################
 # 4) MAIN => for each star solution, store 1 line: (p_c, R, M, e(pc), col2(pc), ...)
 ###############################################################################
 def main(args=None):
@@ -238,6 +418,23 @@ FULL GACHI MODE (all the bells and whistles):
   tovx inputCode/hsdd2.csv -n 2000 --dr 0.0001 -q -o export/ultra
 
 ===================================================================
+NEW! BATCH PROCESSING MODE (process multiple files in parallel!):
+===================================================================
+
+Process all CSV files in a folder using all CPU cores:
+  tovx --batch inputCode/
+  python -m tovextravaganza.tov --batch inputCode/
+
+Process with specific number of workers:
+  tovx --batch inputCode/ --workers 4
+  
+Batch mode with custom output and settings:
+  tovx --batch inputCode/ -o export/batch_results -n 500 --workers 8
+
+Oh boy oh boy, this will process all EOS files in parallel!
+Perfect for when you have many EOS files to analyze!
+
+===================================================================
 Output: Mass-radius sequences WITH tidal deformability (Lambda, k2)!
         CSV + beautiful PDF plots in export/stars/ folder!
 ===================================================================
@@ -262,7 +459,19 @@ Output: Mass-radius sequences WITH tidal deformability (Lambda, k2)!
         parser.add_argument('--save-png', action='store_true',
                           help='Also save PNG versions of plots (for README/web, default: PDF only)')
         
+        # Batch processing options
+        parser.add_argument('-b', '--batch', type=str,
+                          help='Batch mode: process all CSV files in the specified directory in parallel')
+        parser.add_argument('-w', '--workers', type=int, default=cpu_count(),
+                          help=f'Number of parallel workers for batch mode (default: {cpu_count()} = CPU count)')
+        
         args = parser.parse_args()
+        
+        # Check if batch mode is requested
+        if args.batch:
+            # Batch mode: process all files in directory
+            process_batch(args)
+            return
         
         # If no input file provided, print help and exit
         if args.input is None:

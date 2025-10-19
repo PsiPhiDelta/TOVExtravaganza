@@ -1,10 +1,14 @@
 # 🌟 TOV Extravaganza
 
-Welcome to **TOV Extravaganza**, your Python toolkit for solving the Tolman-Oppenheimer-Volkoff (TOV) equations and exploring neutron star properties. **Oh boy oh boy!**
+**Python Toolkit for Neutron Star Physics: Solve TOV Equations, Calculate Tidal Deformability, and Explore Neutron Star Properties**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PyPI version](https://badge.fury.io/py/tovextravaganza.svg)](https://badge.fury.io/py/tovextravaganza)
+[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![arXiv](https://img.shields.io/badge/arXiv-2411.04064-b31b1b.svg)](https://arxiv.org/abs/2411.04064)
+[![Downloads](https://pepy.tech/badge/tovextravaganza)](https://pepy.tech/project/tovextravaganza)
 
-Solve TOV equations, compute tidal deformabilities, generate radial profiles, and explore the Mass-Radius relationship of neutron stars, all with a streamlined command-line interface.
+**TOV Extravaganza** is a comprehensive Python package for astrophysicists and researchers studying neutron stars, compact objects, and gravitational wave astronomy. Solve the Tolman-Oppenheimer-Volkoff (TOV) equations, compute tidal deformabilities for binary neutron star mergers, generate detailed radial profiles of neutron star interiors, and explore the Mass-Radius relationship for different equations of state (EoS).
 
 ---
 
@@ -13,12 +17,14 @@ Solve TOV equations, compute tidal deformabilities, generate radial profiles, an
 - **Interactive Wizard** 🧙‍♂️ – Beginner-friendly guided workflow (just answer questions!)
 - **Mass-Radius Calculations** – Solve TOV equations for multiple central pressures
 - **Tidal Deformability** – Compute dimensionless tidal deformability (Λ) and Love number (k₂)
+- **Batch Processing** 🚀 **NEW!** – Process multiple EOS files in parallel using all CPU cores
 - **Radial Profiles** – Generate detailed internal structure profiles with M-R context
 - **Target-Specific Profiles** – Find stars by exact mass or radius values
 - **EOS Converter** – Convert raw equation of state data into TOV code units (CLI + interactive)
 - **Clean Output** – Organized export structure with CSV data and publication-ready plots
 
 ---
+
 
 ## 📂 Project Structure
 
@@ -253,6 +259,70 @@ python -m tovextravaganza.tov inputCode/hsdd2.csv \
     --no-plot \                             # Skip plot generation
     --no-show                               # Don't display plot (still saves)
 ```
+
+#### Batch Processing Mode 🚀 NEW!
+
+**Process multiple EOS files in parallel!** Perfect for analyzing many equations of state at once.
+
+**Via pip:**
+```bash
+# Process all CSV files in a directory with all CPU cores
+tovx --batch inputCode/
+
+# Specify number of parallel workers
+tovx --batch inputCode/ --workers 4
+
+# Combine with other options
+tovx --batch inputCode/ -n 500 -o export/batch_results --workers 8
+```
+
+**From source:**
+```bash
+# Process all files in parallel
+python -m tovextravaganza.tov --batch inputCode/
+
+# Custom workers and settings
+python -m tovextravaganza.tov --batch inputCode/ --workers 4 -n 500
+```
+
+**Performance Benefits:**
+- Automatically uses all CPU cores (configurable with `--workers`)
+- Processes files independently in parallel
+- Shows comprehensive summary with statistics for each file
+- Gracefully handles errors in individual files without stopping the batch
+
+**Example Output:**
+```
+======================================================================
+BATCH PROCESSING MODE - oh boy oh boy!
+======================================================================
+Found 3 CSV files in inputCode
+Processing with 24 parallel workers
+Output directory: export/stars
+Stars per file: 200
+======================================================================
+
+======================================================================
+BATCH PROCESSING COMPLETE!
+======================================================================
+
+Processed 3 files in 16.15 seconds
+  ✓ Successful: 3
+  ✗ Failed: 0
+
+======================================================================
+SUCCESSFUL FILES:
+======================================================================
+  csc                  =>  149 solutions, Max M = 1.1186 Msun
+  hsdd2                =>  151 solutions, Max M = 2.4229 Msun
+  test                 =>  140 solutions, Max M = 1.8730 Msun
+
+======================================================================
+All results saved to: export/stars
+======================================================================
+```
+
+---
 
 #### Output
 
@@ -678,3 +748,9 @@ Thanks to the astrophysics and gravitational wave communities for making neutron
 
 *Built with Python, NumPy, SciPy, and a healthy dose of enthusiasm for compact objects.*
 
+
+## 🔑 Keywords
+
+`neutron-star` `neutron-stars` `tov` `tov-equation` `tov-equations` `tidal-deformability` `gravitational-waves` `astrophysics` `equation-of-state` `eos` `python-physics` `astronomy` `compact-objects` `GW170817` `nuclear-astrophysics` `nuclear-physics` `mass-radius` `love-number` `relativistic-stars` `color-superconductivity` `superconductivity` `csc` `cfl` `quark-matter` `dense-matter` `phase-transitions` `qcd` `binary-neutron-stars` `ligo` `virgo` `general-relativity` `stellar-structure` `computational-physics` `scientific-computing`
+
+---

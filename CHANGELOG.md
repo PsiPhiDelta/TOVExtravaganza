@@ -4,6 +4,25 @@ All notable changes to TOV Extravaganza.
 
 ---
 
+## [1.3.0] - 2025-10-19
+
+### Added
+- **Batch Processing Mode** 🚀 – Process multiple EOS files in parallel!
+  - New `--batch` flag to process all CSV files in a directory
+  - Configurable parallel workers with `--workers` flag (defaults to CPU count)
+  - Comprehensive summary with success/failure statistics for each file
+  - Significant performance improvements: ~45% faster with 2 workers, scales with more cores
+  - Graceful error handling: individual file failures don't stop the batch
+- Updated CLI help with batch processing examples
+- Documentation in README with usage examples and performance benefits
+
+### Performance
+- Parallel processing using Python's multiprocessing module
+- Automatic CPU core detection and utilization
+- Example: 3 files processed in 4.7s (parallel) vs 6.8s (sequential)
+
+---
+
 ## [1.2.0] - 2025-10-18
 
 ### Changed
