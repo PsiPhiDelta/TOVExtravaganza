@@ -19,5 +19,7 @@ recursive-exclude maxwellConstructorEoS *
 recursive-exclude ToCSV *
 recursive-exclude plotting *
 recursive-exclude radial *
+recursive-exclude test_venv *
+recursive-exclude temp_tutorial_test *
 exclude .gitignore
 exclude README_preview.html
