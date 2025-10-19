@@ -35,6 +35,57 @@ class EOS:
             raise ValueError("Need at least 2 data points for interpolation.")
         
         self.ilast = 0  # Cache for bracket index
+        
+        # Precompute de/dp for tidal calculations (matches their fdedp[])
+        self.fdedp = self._precompute_fdedp()
+    
+    def _precompute_fdedp(self):
+        """
+        Precompute de/dp at each EOS table point using centered differences.
+        Matches their implementation: fdedp[i] = (e[i+1]-e[i-1])/(p[i+1]-p[i-1])
+        """
+        fdedp = np.zeros(self.n_points)
+        e_table = self.data_dict['e']
+        
+        # Centered differences for interior points
+        for i in range(1, self.n_points - 1):
+            fdedp[i] = (e_table[i+1] - e_table[i-1]) / (self.p_table[i+1] - self.p_table[i-1])
+        
+        # Endpoints
+        fdedp[0] = fdedp[1]
+        fdedp[self.n_points-1] = fdedp[self.n_points-2]
+        
+        return fdedp
+    
+    def get_fdedp(self, p):
+        """
+        Get de/dp at given pressure by interpolating precomputed fdedp[].
+        Matches their getF() function.
+        """
+        # Clamp to table bounds
+        if p <= self.p_table[0]:
+            return self.fdedp[0]
+        if p >= self.p_table[-1]:
+            return self.fdedp[-1]
+        
+        # Find bracket
+        i = self.ilast if self.ilast < self.n_points - 1 else 0
+        while i > 0 and p < self.p_table[i]:
+            i -= 1
+        while i < self.n_points - 1 and p > self.p_table[i+1]:
+            i += 1
+        
+        # Linear interpolation
+        p_i = self.p_table[i]
+        p_ip1 = self.p_table[i+1]
+        f_i = self.fdedp[i]
+        f_ip1 = self.fdedp[i+1]
+        
+        frac = (p - p_i) / (p_ip1 - p_i)
+        f = f_i + frac * (f_ip1 - f_i)
+        
+        # Don't update self.ilast here to avoid interfering with other interpolation calls
+        return f
     
     @classmethod
     def from_file(cls, filename):
