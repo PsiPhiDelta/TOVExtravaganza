@@ -4,6 +4,34 @@ All notable changes to TOV Extravaganza.
 
 ---
 
+## [1.4.2] - 2025-10-19
+
+### Fixed
+- **Critical M-R Curve Bug** – Reverted problematic surface detection changes from v1.4.0
+  - Surface detection restored to `p <= 0.0` (instead of `p <= eos.p_table[0]`)
+  - TOV solver `dpdr` formula reverted to stable version
+  - Integration starting point restored to `r=0.0`
+  - DD2 EOS now correctly gives maximum mass ~2.42 M☉ (was broken at ~2.10 M☉)
+  - All M-R curves now match reference implementations
+
+### Improved
+- **Interactive Batch Converter** – Batch mode now prompts for missing parameters
+  - Automatically prompts for pressure column if not provided
+  - Automatically prompts for energy column if not provided
+  - Automatically prompts for unit system if not provided
+  - Auto-creates `inputCode/Batch/` subfolder when processing batch directories
+  - Works in both interactive and non-interactive modes
+  
+- **Tidal Deformability Accuracy** – Improved but still under active development
+  - Lambda values within ~6% of reference for DD2 EOS
+  - Further improvements planned for future releases
+
+### Added
+- Batch EOS test files for validation (RGgen v0.70, v0.80, v0.85)
+- Comparison scripts for validating against reference implementations
+
+---
+
 ## [1.4.0] - 2025-10-19
 
 ### Added
