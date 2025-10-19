@@ -226,18 +226,32 @@ def process_single_file(file_args):
             except Exception:
                 pass  # Skip failed solutions quietly in batch mode
         
-        # Write results
-        out_folder = args_dict['output']
-        if not os.path.exists(out_folder):
-            os.makedirs(out_folder, exist_ok=True)
+        # Check if we got ANY results
+        if not tidal_results:
+            return {
+                'status': 'error',
+                'filename': base_name,
+                'error': 'No valid solutions found (all stars failed)'
+            }
         
-        writer = TidalWriter(output_folder=out_folder)
-        csv_path, pdf_path = writer.write_results(
-            tidal_results,
-            base_name,
-            show_plot=False,  # Never show plots in batch mode
-            save_png=args_dict.get('save_png', False)
-        )
+        # Write results (with error handling)
+        try:
+            out_folder = args_dict['output']
+            os.makedirs(out_folder, exist_ok=True)  # exist_ok prevents race condition
+            
+            writer = TidalWriter(output_folder=out_folder)
+            csv_path, pdf_path = writer.write_results(
+                tidal_results,
+                base_name,
+                show_plot=False,  # Never show plots in batch mode
+                save_png=args_dict.get('save_png', False)
+            )
+        except Exception as e:
+            return {
+                'status': 'error',
+                'filename': base_name,
+                'error': f'Failed to write output: {str(e)}'
+            }
         
         # Get stats
         valid_results = [r for r in tidal_results if r['M_solar'] > 0.01]
