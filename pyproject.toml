@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tovextravaganza"
-version = "1.5.1"
+version = "1.5.2"
 description = "Python toolkit for solving TOV equations, calculating tidal deformability, and exploring neutron star properties for gravitational wave and nuclear astrophysics research"
 readme = {file = "README.md", content-type = "text/markdown"}
 authors = [
