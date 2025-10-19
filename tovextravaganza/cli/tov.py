@@ -222,6 +222,12 @@ def process_single_file(file_args):
             try:
                 result = tidal_calc.compute(p_c)
                 result['p_c'] = p_c
+                
+                # Add central column values from EOS
+                central_values = eos.get_all_values_at_pressure(p_c)
+                for key, val in central_values.items():
+                    result[f'central_{key}'] = val
+                
                 tidal_results.append(result)
             except Exception:
                 pass  # Skip failed solutions quietly in batch mode
@@ -532,6 +538,12 @@ Output: Mass-radius sequences WITH tidal deformability (Lambda, k2)!
             result = tidal_calc.compute(p_c)
             # Add p_c to the result dictionary
             result['p_c'] = p_c
+            
+            # Add central column values from EOS
+            central_values = eos.get_all_values_at_pressure(p_c)
+            for key, val in central_values.items():
+                result[f'central_{key}'] = val
+            
             tidal_results.append(result)
             if not args.quiet:
                 M = result['M_solar']
