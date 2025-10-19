@@ -57,6 +57,7 @@ class EOS:
     def _read_csv(filename):
         """
         Read EOS from CSV file.
+        InputCode format is STANDARDIZED: col1=p, col2=e, rest=additional
         
         Returns:
         --------
@@ -64,10 +65,11 @@ class EOS:
             Column data
         colnames : list
             Column names
+        string_dict : dict
+            String column data
         """
         raw_data = []
         header = None
-        potential_headers = []  # Collect potential headers from comments
 
         with open(filename, "r") as fin:
             reader = csv.reader(fin)
@@ -75,62 +77,47 @@ class EOS:
                 if not row:
                     continue
                 
-                # Check for commented lines
+                # Skip comment lines but check for header
                 if row[0].startswith("#"):
-                    # Save as potential header if it looks like column names
-                    if len(row) >= 2 and header is None:
-                        # Remove # from first element
-                        cleaned_row = [row[0].lstrip('#').strip()] + row[1:]
-                        potential_headers.append(cleaned_row)
+                    # Check if this is a header line (last comment before data)
+                    if header is None and len(row) >= 2:
+                        # Extract header from comment
+                        cleaned_row = [row[0].lstrip('#').strip()] + [c.strip() for c in row[1:]]
+                        header = cleaned_row
                     continue
                 
-                # Check if we have a header yet
+                # Data row
                 if header is None:
-                    # Try parsing first 2 columns as float
+                    # Try to detect if first row is header or data
                     try:
                         float(row[0]), float(row[1])
-                        # No exception => numeric data row
-                        # Check if we collected any potential headers
-                        if potential_headers:
-                            # Use the last potential header that matches the number of columns
-                            for pot_header in reversed(potential_headers):
-                                if len(pot_header) == len(row):
-                                    header = pot_header
-                                    break
+                        # Numeric, so no header - create default
+                        ncols = len(row)
+                        header = ["p", "e"] + [f"col{i}" for i in range(2, ncols)]
                         raw_data.append(row)
                     except ValueError:
-                        # Not numeric => treat as header
-                        header = row
+                        # Non-numeric, it's a header
+                        header = [c.strip() for c in row]
                 else:
                     raw_data.append(row)
-
-        # If no header found, create a default
+        
+        # Ensure we have header
         if header is None:
-            ncols = len(raw_data[0])
+            ncols = len(raw_data[0]) if raw_data else 2
             header = ["p", "e"] + [f"col{i}" for i in range(2, ncols)]
-        else:
-            # Normalize header names: map pressure/epsilon variations to p/e (ONLY for first 2 columns)
-            normalized_header = []
-            p_found = False
-            e_found = False
-            
-            for i, h in enumerate(header):
-                h_lower = h.lower().strip()
-                clean_name = h.replace('(code_units)', '').replace('(code units)', '').strip()
-                
-                # Only map first pressure column to 'p'
-                if not p_found and ('pressure' in h_lower and 'symmetry' not in h_lower):
-                    normalized_header.append('p')
-                    p_found = True
-                # Only map first epsilon/energy column to 'e' (but not symmetry_energy, etc.)
-                elif not e_found and (('epsilon' in h_lower) or (h_lower == 'e') or ('energy_density' in h_lower) or (h_lower == 'energy')):
-                    normalized_header.append('e')
-                    e_found = True
-                else:
-                    # Keep original name cleaned
-                    normalized_header.append(clean_name)
-            
-            header = normalized_header
+        
+        # Clean header: remove (code_units) tags, force col1=p, col2=e
+        cleaned_header = []
+        for i, h in enumerate(header):
+            clean = h.replace('(code_units)', '').replace('(code units)', '').strip()
+            if i == 0:
+                cleaned_header.append('p')  # Force first column to 'p'
+            elif i == 1:
+                cleaned_header.append('e')  # Force second column to 'e'  
+            else:
+                cleaned_header.append(clean)  # Keep rest as-is
+        
+        header = cleaned_header
 
         # Parse data - separate numeric and string columns
         columns = [[] for _ in header]
