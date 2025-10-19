@@ -4,6 +4,22 @@ All notable changes to TOV Extravaganza.
 
 ---
 
+## [1.3.1] - 2025-10-19
+
+### Added
+- **Batch Processing for Radial Profiles** 🚀 – Parallel processing now available for radial profiles too!
+  - `tovx-radial --batch inputCode/` processes all files in parallel
+  - Organized output structure: each EOS gets its own subfolder
+  - Same performance benefits and error handling as TOV batch mode
+  - Example: 3 files with profiles processed in 38s with 2 workers
+
+### Improved
+- Better error handling in TOV batch processing
+- Check for empty results before writing output
+- Race condition prevention with `exist_ok=True` for folder creation
+
+---
+
 ## [1.3.0] - 2025-10-19
 
 ### Added
