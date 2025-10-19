@@ -266,7 +266,7 @@ Process **multiple EOS files in parallel** for high-throughput analysis.
 
 ### Scenario: Analyze 6 Quark Matter EOS Models
 
-You have 6 raw EOS files in `inputRaw/Batch/` with different parameters (CSC and RGNJL series from [arXiv:2411.04064](https://arxiv.org/abs/2411.04064)). Let's process them all efficiently.
+You have 6 raw EOS files in `inputRaw/Batch/` with different parameters (CSC and RGNJL series from [arXiv:2411.04064](https://arxiv.org/abs/2411.04064)). The RGNJL tables are from the [RG-NJL-EoS-tables](https://github.com/marcohof/RG-NJL-EoS-tables) repository. Let's process them all efficiently.
 
 ### Step 1: Batch Convert to Code Units
 
@@ -1024,7 +1024,7 @@ Please maintain the code style and add tests where appropriate.
 
 - **CompOSE:** https://compose.obspm.fr/
 - **stellarcollapse.org:** Comprehensive EOS tables
-- **RG-NJL EoS Tables (Color-Superconducting Quark Matter):** https://github.com/marcohof/RG-NJL-EoS-tables
+- **RG-NJL EoS Tables:** Renormalization Group-consistent NJL model with color-superconducting quark matter (2SC and CFL phases) - https://github.com/marcohof/RG-NJL-EoS-tables
 
 ---
 
