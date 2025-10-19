@@ -31,6 +31,7 @@ from ..core.eos import EOS
 from ..core.tov_solver import TOVSolver
 from ..core.tidal_calculator import TidalCalculator
 from ..core.output_handlers import MassRadiusWriter, TidalWriter
+from ..utils.timeout import timeout, TimeoutError
 
 # Use this constant to convert from code units to solar masses:
 Msun_in_code = 1.4766  # 1 Msun = 1.4766 (G=c=1) length units
@@ -218,9 +219,20 @@ def process_single_file(file_args):
         
         # Solve for each pressure
         tidal_results = []
+        timeout_value = args_dict.get('timeout', 10.0)
+        
+        # Create timeout-wrapped compute function if timeout is enabled
+        if timeout_value and timeout_value > 0:
+            @timeout(timeout_value)
+            def compute_with_timeout(p_c):
+                return tidal_calc.compute(p_c)
+        else:
+            def compute_with_timeout(p_c):
+                return tidal_calc.compute(p_c)
+        
         for p_c in central_pressures:
             try:
-                result = tidal_calc.compute(p_c)
+                result = compute_with_timeout(p_c)
                 result['p_c'] = p_c
                 
                 # Add central column values from EOS
@@ -229,6 +241,8 @@ def process_single_file(file_args):
                     result[f'central_{key}'] = val
                 
                 tidal_results.append(result)
+            except TimeoutError:
+                pass  # Skip this star, timeout occurred
             except Exception:
                 pass  # Skip failed solutions quietly in batch mode
         
@@ -250,7 +264,8 @@ def process_single_file(file_args):
                 tidal_results,
                 base_name,
                 show_plot=False,  # Never show plots in batch mode
-                save_png=args_dict.get('save_png', False)
+                save_png=args_dict.get('save_png', False),
+                rmax_plot=args_dict.get('rmax_plot', 20.0)
             )
         except Exception as e:
             return {
@@ -318,7 +333,9 @@ def process_batch(args):
         'dr': args.dr,
         'rtol': getattr(args, 'rtol', DEFAULT_RTOL),
         'atol': getattr(args, 'atol', DEFAULT_ATOL),
-        'save_png': args.save_png
+        'save_png': args.save_png,
+        'rmax_plot': args.rmax_plot,
+        'timeout': args.timeout
     }
     
     file_args_list = [(str(f), args_dict) for f in csv_files]
@@ -478,6 +495,10 @@ Output: Mass-radius sequences WITH tidal deformability (Lambda, k2)!
                           help='Skip plotting entirely')
         parser.add_argument('--save-png', action='store_true',
                           help='Also save PNG versions of plots (for README/web, default: PDF only)')
+        parser.add_argument('--rmax-plot', type=float, default=20.0,
+                          help='Maximum radius for plot axis (default: 20 km, does not affect data)')
+        parser.add_argument('--timeout', type=float, default=10.0,
+                          help='Timeout for each star calculation in seconds (default: 10, 0 = no timeout)')
         
         # Batch processing options
         parser.add_argument('-b', '--batch', type=str,
@@ -533,9 +554,19 @@ Output: Mass-radius sequences WITH tidal deformability (Lambda, k2)!
     
     # Solve for each pressure - including tidal deformability!
     tidal_results = []
+    
+    # Create timeout-wrapped compute function if timeout is enabled
+    if args.timeout and args.timeout > 0:
+        @timeout(args.timeout)
+        def compute_with_timeout(p_c):
+            return tidal_calc.compute(p_c)
+    else:
+        def compute_with_timeout(p_c):
+            return tidal_calc.compute(p_c)
+    
     for p_c in central_pressures:
         try:
-            result = tidal_calc.compute(p_c)
+            result = compute_with_timeout(p_c)
             # Add p_c to the result dictionary
             result['p_c'] = p_c
             
@@ -551,6 +582,9 @@ Output: Mass-radius sequences WITH tidal deformability (Lambda, k2)!
                 Lambda = result['Lambda']
                 k2 = result['k2']
                 print(f"p_c={p_c:.3e} => M={M:.4f} Msun, R={R:.2f} km, Lambda={Lambda:.2f}, k2={k2:.4f}")
+        except TimeoutError:
+            if not args.quiet:
+                print(f"Failed at p_c={p_c:.3e}: Timeout after {args.timeout}s")
         except Exception as e:
             if not args.quiet:
                 print(f"Failed at p_c={p_c:.3e}: {e}")
@@ -558,7 +592,7 @@ Output: Mass-radius sequences WITH tidal deformability (Lambda, k2)!
     # Use our fancy tidal writer (has all the data: M, R, Lambda, k2)
     writer = TidalWriter(output_folder=out_folder)
     show_plot = not args.no_show and not args.no_plot
-    csv_path, pdf_path = writer.write_results(tidal_results, base_name, show_plot=show_plot, save_png=args.save_png)
+    csv_path, pdf_path = writer.write_results(tidal_results, base_name, show_plot=show_plot, save_png=args.save_png, rmax_plot=args.rmax_plot)
     
     if args.save_png:
         print("\n✓ Also saved PNG versions for README/web display")

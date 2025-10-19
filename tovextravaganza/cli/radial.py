@@ -6,9 +6,17 @@ import matplotlib.pyplot as plt
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
 import time
+try:
+    import h5py
+    HAS_HDF5 = True
+except ImportError:
+    HAS_HDF5 = False
 
-# We import from "tov" for backward compatibility
-from .tov import read_eos_csv_multi, EOSMulti, solve_tov_rad, DR, RMAX
+# Import the new EOS class and TOV solver
+from ..core.eos import EOS
+from ..core.tov_solver import TOVSolver
+from .tov import DR, RMAX
+from ..utils.timeout import timeout, TimeoutError
 
 ###############################################################################
 # UNIT SYSTEM EXPLANATION
@@ -44,21 +52,27 @@ class RadialProfiler:
     while keeping all your favorite comedic comments!
     """
     
-    def __init__(self, eos, output_folder="export/radial_profiles"):
+    def __init__(self, eos, output_folder="export/radial_profiles", rmax_plot=20.0, timeout_value=10.0):
         """
         Initialize the radial profiler.
         
         Parameters:
         -----------
-        eos : EOSMulti
+        eos : EOS
             Your beautiful EOS object
         output_folder : str
             Base output folder (will create json/ and plots/ subfolders)
+        rmax_plot : float
+            Maximum radius for M-R plot axis (default: 20.0 km)
+        timeout_value : float
+            Timeout for each star calculation in seconds (default: 10.0, 0 = no timeout)
         """
         self.eos = eos
         self.output_folder = output_folder
         self.json_folder = os.path.join(output_folder, "json")
         self.plot_folder = os.path.join(output_folder, "plots")
+        self.rmax_plot = rmax_plot
+        self.timeout_value = timeout_value
         
         # Create folders
         if not os.path.exists(self.json_folder):
@@ -73,27 +87,45 @@ class RadialProfiler:
         Solve TOV for a given central pressure and return radial profile.
         oh boy oh boy, this is where the magic happens!
         """
-        r_arr, M_arr, p_arr, R, M = solve_tov_rad(p_c, self.eos, RMAX, DR)
+        # Solve TOV using the new EOS class
+        solver = TOVSolver(self.eos, r_max=RMAX, dr=DR)
+        star, r_arr, M_arr, p_arr = solver.solve(p_c, return_profile=True)
         
-        # Interpolate all other EOS columns at each p(r)
+        # Interpolate all EOS columns (numeric and string) at each p(r)
         all_cols_data = {}
-        for col in self.eos.colnames:
-            if col == "p":
-                all_cols_data["p"] = p_arr
-            else:
-                all_cols_data[col] = np.array([self.eos.interp(col, p_val) for p_val in p_arr])
+        for i, p_val in enumerate(p_arr):
+            # Get all column values at this pressure
+            col_values = self.eos.get_all_values_at_pressure(p_val)
+            for col_name, col_val in col_values.items():
+                if col_name not in all_cols_data:
+                    all_cols_data[col_name] = []
+                all_cols_data[col_name].append(col_val)
+        
+        # Convert lists to arrays (numeric) or keep as lists (strings)
+        for col_name in all_cols_data:
+            try:
+                all_cols_data[col_name] = np.array(all_cols_data[col_name], dtype=float)
+            except (ValueError, TypeError):
+                # Keep as list for string columns
+                pass
+        
+        # Always include p array
+        all_cols_data["p"] = p_arr
         
         return r_arr, M_arr, all_cols_data
     
     def compute_full_mr_curve(self, num_points=100):
         """
-        Compute full M-R curve for visualization.
+        Compute full M-R curve for visualization (fast, no full profiles).
         oh boy oh boy, more stars!
         Filters out unphysical stars (R >= 99 km or M < 0.05 Msun).
         """
-        p_table = self.eos.data_dict["p"]
-        p_min = p_table[0]
-        p_max = p_table[-1]
+        # Use fast TOV solver (no full profiles, just M and R)
+        solver = TOVSolver(self.eos, r_max=RMAX, dr=DR)
+        
+        p_range = self.eos.get_pressure_range()
+        p_min = max(p_range[0], 1e-15)
+        p_max = p_range[1]
         
         central_pressures = np.logspace(np.log10(p_min), np.log10(p_max), num_points)
         
@@ -101,15 +133,17 @@ class RadialProfiler:
         M_list = []
         
         for p_c in central_pressures:
-            r_arr, M_arr, _ = self.compute_profile(p_c)
-            
-            # Apply same filter: R < 99 km and M > 0.05 Msun
-            R_final = r_arr[-1] if len(r_arr) > 0 else 0
-            M_final = M_arr[-1] / MSUN_TO_KM if len(M_arr) > 0 else 0
-            
-            if len(r_arr) > 0 and M_arr[-1] > 0 and R_final < 99.0 and M_final > 0.05:
-                R_list.append(R_final)
-                M_list.append(M_final)
+            try:
+                star = solver.solve(p_c)
+                R_final = star.radius
+                M_final = star.mass_solar
+                
+                # Apply same filter: R < 99 km and M > 0.05 Msun
+                if R_final < 99.0 and M_final > 0.05:
+                    R_list.append(R_final)
+                    M_list.append(M_final)
+            except:
+                pass
         
         return np.array(R_list), np.array(M_list)
     
@@ -127,9 +161,9 @@ class RadialProfiler:
         --------
         dict : Profile for the closest star
         """
-        p_table = self.eos.data_dict["p"]
-        p_min = p_table[0]
-        p_max = p_table[-1]
+        p_range = self.eos.get_pressure_range()
+        p_min = max(p_range[0], 1e-15)
+        p_max = p_range[1]
         
         # Step 1: Quick coarse search to find stable branch (up to M_max)
         # Use fewer samples for initial scan
@@ -158,8 +192,8 @@ class RadialProfiler:
         
         # Check if target is beyond M_max
         if target_mass_Msun > M_max:
-            print(f"ERROR: Target M={target_mass_Msun:.3f} M☉ exceeds M_max={M_max:.3f} M☉")
-            print(f"       Stable stars only exist up to M_max. Please choose M < {M_max:.3f} M☉")
+            print(f"ERROR: Target M={target_mass_Msun:.3f} Msun exceeds M_max={M_max:.3f} Msun")
+            print(f"       Stable stars only exist up to M_max. Please choose M < {M_max:.3f} Msun")
             return None
         
         # Step 2: Fine search in stable branch only
@@ -191,9 +225,9 @@ class RadialProfiler:
                         'data': all_cols_data
                     }
         
-        # Step 3: Adaptive refinement to guarantee accuracy < 0.01 M☉
+        # Step 3: Adaptive refinement to guarantee accuracy < 0.01 Msun
         if best_profile and best_diff > 0.01:
-            print(f"  Refining search (initial error: {best_diff:.4f} M☉)...")
+            print(f"  Refining search (initial error: {best_diff:.4f} Msun)...")
             # Narrow search around best_p_c
             p_low = best_p_c * 0.9
             p_high = best_p_c * 1.1
@@ -221,8 +255,104 @@ class RadialProfiler:
             M_final = best_profile['M'][-1] / MSUN_TO_KM
             error = abs(M_final - target_mass_Msun)
             if error > 0.01:
-                print(f"WARNING: Could not find star within 0.01 M☉ (error: {error:.4f} M☉)")
-            print(f"Found star closest to M={target_mass_Msun:.3f} M☉: M={M_final:.4f} M☉, R={R_final:.2f} km (error: {error:.4f} M☉, M_max={M_max:.3f} M☉)")
+                print(f"WARNING: Could not find star within 0.01 Msun (error: {error:.4f} Msun)")
+            print(f"Found star closest to M={target_mass_Msun:.3f} Msun: M={M_final:.4f} Msun, R={R_final:.2f} km (error: {error:.4f} Msun, M_max={M_max:.3f} Msun)")
+        
+        return best_profile
+    
+    def find_maximum_mass_star(self, precision=0.001):
+        """
+        Find the star with maximum mass (M_max) with specified precision.
+        oh boy oh boy, let's find the max mass star!
+        
+        Uses a fast search (only computing M and R, not full profiles) followed by
+        a single full profile computation at the M_max configuration.
+        
+        Parameters:
+        -----------
+        precision : float
+            Target precision in solar masses (default: 0.001 Msun)
+            
+        Returns:
+        --------
+        dict : Profile for the maximum mass star
+        """
+        print(f"\nSearching for maximum mass star (precision: {precision:.4f} Msun)...")
+        
+        # Use fast TOV solver (no full profile) for the search
+        solver = TOVSolver(self.eos, r_max=RMAX, dr=DR)
+        
+        # Step 1: Coarse search to find approximate M_max
+        p_range = self.eos.get_pressure_range()
+        p_min = max(p_range[0], 1e-15)
+        p_max = p_range[1]
+        
+        coarse_pressures = np.logspace(np.log10(p_min), np.log10(p_max), 50)
+        M_values = []
+        p_stable = []
+        
+        for p_c in coarse_pressures:
+            try:
+                star = solver.solve(p_c)
+                R_final = star.radius
+                M_final = star.mass_solar
+                
+                if R_final < 99.0 and M_final > 0.05:
+                    M_values.append(M_final)
+                    p_stable.append(p_c)
+            except:
+                pass
+        
+        if not M_values:
+            print("ERROR: No valid stars found!")
+            return None
+        
+        # Find approximate maximum
+        M_max_idx = np.argmax(M_values)
+        M_max_approx = M_values[M_max_idx]
+        p_max_approx = p_stable[M_max_idx]
+        
+        print(f"  Coarse search (50 points): M_max ~{M_max_approx:.4f} Msun at p_c={p_max_approx:.3e}")
+        
+        # Step 2: Fine search around maximum (fast, no full profiles)
+        p_low = p_stable[max(0, M_max_idx - 3)]
+        p_high = p_stable[min(len(p_stable) - 1, M_max_idx + 3)]
+        
+        fine_pressures = np.logspace(np.log10(p_low), np.log10(p_high), 200)
+        
+        max_M = 0
+        best_p_c = None
+        
+        for p_c in fine_pressures:
+            try:
+                star = solver.solve(p_c)
+                R_final = star.radius
+                M_final = star.mass_solar
+                
+                if R_final < 99.0 and M_final > 0.05:
+                    if M_final > max_M:
+                        max_M = M_final
+                        best_p_c = p_c
+            except:
+                pass
+        
+        print(f"  Fine search (200 points): M_max = {max_M:.4f} Msun at p_c={best_p_c:.3e}")
+        
+        # Step 3: Compute FULL radial profile only for the M_max configuration
+        if best_p_c:
+            print(f"  Computing full radial profile at M_max...")
+            r_arr, M_arr, all_cols_data = self.compute_profile(best_p_c)
+            R_final = r_arr[-1]
+            M_final = M_arr[-1] / MSUN_TO_KM
+            
+            best_profile = {
+                'p_c': best_p_c,
+                'r': r_arr,
+                'M': M_arr,
+                'data': all_cols_data
+            }
+            
+            print(f"✓ Found M_max = {M_final:.4f} Msun, R = {R_final:.2f} km")
         
         return best_profile
     
@@ -240,9 +370,9 @@ class RadialProfiler:
         --------
         dict : Profile for the closest star
         """
-        p_table = self.eos.data_dict["p"]
-        p_min = p_table[0]
-        p_max = p_table[-1]
+        p_range = self.eos.get_pressure_range()
+        p_min = max(p_range[0], 1e-15)
+        p_max = p_range[1]
         
         # Step 1: Quick coarse search to find stable branch (up to M_max)
         coarse_pressures = np.logspace(np.log10(p_min), np.log10(p_max), 30)
@@ -328,7 +458,7 @@ class RadialProfiler:
             error = abs(R_final - target_radius_km)
             if error > 0.01:
                 print(f"WARNING: Could not find star within 0.01 km (error: {error:.4f} km)")
-            print(f"Found star closest to R={target_radius_km:.2f} km: R={R_final:.2f} km, M={M_final:.4f} M☉ (error: {error:.4f} km, M_max={M_max:.3f} M☉)")
+            print(f"Found star closest to R={target_radius_km:.2f} km: R={R_final:.2f} km, M={M_final:.4f} Msun (error: {error:.4f} km, M_max={M_max:.3f} Msun)")
         
         return best_profile
     
@@ -340,47 +470,59 @@ class RadialProfiler:
         """
         # Default pressure range
         if p_min is None or p_max is None:
-            p_table = self.eos.data_dict["p"]
-            p_min = p_min or p_table[0]
-            p_max = p_max or p_table[-1]
+            p_range = self.eos.get_pressure_range()
+            p_min = p_min or max(p_range[0], 1e-15)
+            p_max = p_max or p_range[1]
         
         central_pressures = np.logspace(np.log10(p_min), np.log10(p_max), num_stars)
+        
+        # Create timeout-wrapped compute function if timeout is enabled
+        if self.timeout_value and self.timeout_value > 0:
+            @timeout(self.timeout_value)
+            def compute_with_timeout(p_c):
+                return self.compute_profile(p_c)
+        else:
+            def compute_with_timeout(p_c):
+                return self.compute_profile(p_c)
         
         profiles = []
         skipped = 0
         for i, p_c in enumerate(central_pressures):
-            r_arr, M_arr, all_cols_data = self.compute_profile(p_c)
-            
-            # Apply same filter as tov.py: R < 99 km and M > 0.05 Msun
-            R_final = r_arr[-1] if len(r_arr) > 0 else 0
-            M_final = M_arr[-1] / MSUN_TO_KM if len(M_arr) > 0 else 0
-            
-            if len(r_arr) > 0 and M_arr[-1] > 0 and R_final < 99.0 and M_final > 0.05:
-                profiles.append({
-                    'p_c': p_c,
-                    'r': r_arr,
-                    'M': M_arr,
-                    'data': all_cols_data
-                })
-                print(f"Star {i+1}/{num_stars}: p_c={p_c:.3e} => R={R_final:.2f} km, M={M_final:.4f} M☉")
-            else:
+            try:
+                r_arr, M_arr, all_cols_data = compute_with_timeout(p_c)
+                
+                # Apply same filter as tov.py: R < 99 km and M > 0.05 Msun
+                R_final = r_arr[-1] if len(r_arr) > 0 else 0
+                M_final = M_arr[-1] / MSUN_TO_KM if len(M_arr) > 0 else 0
+                
+                if len(r_arr) > 0 and M_arr[-1] > 0 and R_final < 99.0 and M_final > 0.05:
+                    profiles.append({
+                        'p_c': p_c,
+                        'r': r_arr,
+                        'M': M_arr,
+                        'data': all_cols_data
+                    })
+                    print(f"Star {i+1}/{num_stars}: p_c={p_c:.3e} => R={R_final:.2f} km, M={M_final:.4f} Msun")
+                else:
+                    skipped += 1
+                    print(f"Star {i+1}/{num_stars}: p_c={p_c:.3e} => SKIPPED (R={R_final:.2f} km, M={M_final:.4f} Msun)")
+            except TimeoutError:
                 skipped += 1
-                print(f"Star {i+1}/{num_stars}: p_c={p_c:.3e} => SKIPPED (R={R_final:.2f} km, M={M_final:.4f} M☉)")
+                print(f"Star {i+1}/{num_stars}: p_c={p_c:.3e} => TIMEOUT after {self.timeout_value}s")
         
         if skipped > 0:
-            print(f"\nFiltered: kept {len(profiles)}/{num_stars} physical solutions (R < 99 km, M > 0.05 M☉)")
+            print(f"\nFiltered: kept {len(profiles)}/{num_stars} physical solutions (R < 99 km, M > 0.05 Msun)")
         
         return profiles
     
     def save_profiles(self, profiles, basename):
         """
-        Save profiles to text and JSON files.
-        oh boy oh boy, let's write them out!
+        Save profiles to text metadata and HDF5/JSON files.
+        oh boy oh boy, let's write them out efficiently!
         """
         text_meta_path = os.path.join(self.json_folder, "metadata.txt")
-        json_path = os.path.join(self.json_folder, f"{basename}.json")
         
-        # Write text metadata
+        # Write text metadata (human-readable summary)
         with open(text_meta_path, "w") as f:
             f.write("# Radial profiles for TOV stars in dimensionless code units\n")
             f.write(f"# Number of stars: {len(profiles)}\n")
@@ -393,28 +535,64 @@ class RadialProfiler:
                 f.write(f"M = {prof['M'][-1]:.4f} (code units)\n")
                 f.write(f"Number of radial points: {len(prof['r'])}\n")
         
-        # Write JSON
-        json_data = []
-        for prof in profiles:
-            star_dict = {
-                'p_c': float(prof['p_c']),
-                'R': float(prof['r'][-1]),
-                'M': float(prof['M'][-1]),
-                'radial_points': len(prof['r']),
-                'r': prof['r'].tolist(),
-                'M_r': prof['M'].tolist(),
-                'columns': {}
-            }
-            for col, arr in prof['data'].items():
-                star_dict['columns'][col] = arr.tolist()
-            json_data.append(star_dict)
-        
-        with open(json_path, "w") as f:
-            json.dump(json_data, f, indent=2)
-        
-        print(f"\nRadial data saved to:")
-        print(f"  {text_meta_path}")
-        print(f"  {json_path}")
+        # Save data in HDF5 format (efficient binary format)
+        if HAS_HDF5:
+            hdf5_path = os.path.join(self.json_folder, f"{basename}.h5")
+            with h5py.File(hdf5_path, 'w') as hf:
+                for i, prof in enumerate(profiles):
+                    # Create a group for each star
+                    grp = hf.create_group(f'profile_{i}')
+                    
+                    # Store scalar metadata
+                    grp.attrs['p_c'] = prof['p_c']
+                    grp.attrs['R'] = prof['r'][-1]
+                    grp.attrs['M'] = prof['M'][-1]
+                    grp.attrs['radial_points'] = len(prof['r'])
+                    
+                    # Store radial arrays
+                    grp.create_dataset('r', data=prof['r'], compression='gzip')
+                    grp.create_dataset('M_r', data=prof['M'], compression='gzip')
+                    
+                    # Store all EOS columns
+                    col_grp = grp.create_group('columns')
+                    for col, arr in prof['data'].items():
+                        if isinstance(arr, np.ndarray):
+                            col_grp.create_dataset(col, data=arr, compression='gzip')
+                        elif isinstance(arr, list):
+                            # String columns - store as variable-length strings
+                            str_dtype = h5py.string_dtype(encoding='utf-8')
+                            col_grp.create_dataset(col, data=arr, dtype=str_dtype, compression='gzip')
+            
+            print(f"\nRadial data saved to:")
+            print(f"  {text_meta_path}")
+            print(f"  {hdf5_path} (HDF5 format - efficient binary)")
+        else:
+            # Fallback to JSON if HDF5 not available
+            json_path = os.path.join(self.json_folder, f"{basename}.json")
+            json_data = []
+            for prof in profiles:
+                star_dict = {
+                    'p_c': float(prof['p_c']),
+                    'R': float(prof['r'][-1]),
+                    'M': float(prof['M'][-1]),
+                    'radial_points': len(prof['r']),
+                    'r': prof['r'].tolist(),
+                    'M_r': prof['M'].tolist(),
+                    'columns': {}
+                }
+                for col, arr in prof['data'].items():
+                    if hasattr(arr, 'tolist'):
+                        star_dict['columns'][col] = arr.tolist()
+                    else:
+                        star_dict['columns'][col] = arr
+                json_data.append(star_dict)
+            
+            with open(json_path, "w") as f:
+                json.dump(json_data, f, indent=2)
+            
+            print(f"\nRadial data saved to:")
+            print(f"  {text_meta_path}")
+            print(f"  {json_path} (JSON format - install h5py for efficient HDF5)")
     
     def plot_profiles(self, profiles, mr_curve=None, save_png=False):
         """
@@ -439,13 +617,13 @@ class RadialProfiler:
             R_all, M_all = mr_curve
         else:
             R_all = np.array([prof['r'][-1] for prof in profiles])
-            M_all = np.array([prof['M'][-1] / MSUN_TO_KM for prof in profiles])  # Convert to M☉
+            M_all = np.array([prof['M'][-1] / MSUN_TO_KM for prof in profiles])  # Convert to Msun
         
         # Find M_max to separate stable/unstable branches
         M_max_idx = np.argmax(M_all)
         M_max = M_all[M_max_idx]
         
-        # Split into stable and unstable branches
+        # Split into stable and unstable branches (use ALL data, not filtered by rmax_plot)
         R_stable = R_all[:M_max_idx+1]
         M_stable = M_all[:M_max_idx+1]
         R_unstable = R_all[M_max_idx:]
@@ -471,7 +649,7 @@ class RadialProfiler:
             # Left: M(r) profile
             ax1.plot(r_arr, M_Msun, 'b-', linewidth=2)
             ax1.set_xlabel("r [km]", fontsize=12)
-            ax1.set_ylabel("M(r) [M☉]", fontsize=12)
+            ax1.set_ylabel("M(r) [Msun]", fontsize=12)
             ax1.set_title(f"Mass profile: p_c={p_c_MeV:.3e} MeV/fm³", fontsize=12)
             ax1.grid(True, alpha=0.3)
             
@@ -480,11 +658,12 @@ class RadialProfiler:
             ax2.plot(R_stable, M_stable, 'k-', linewidth=1.5, alpha=0.7, label='Stable branch')
             if len(R_unstable) > 1:
                 ax2.plot(R_unstable, M_unstable, 'k--', linewidth=1.5, alpha=0.5, label='Unstable branch')
-            ax2.plot(R_final, M_final, 'r*', markersize=20, label=f'This star: R={R_final:.2f} km, M={M_final:.3f} M☉')
+            ax2.plot(R_final, M_final, 'r*', markersize=20, label=f'This star: R={R_final:.2f} km, M={M_final:.3f} Msun')
             ax2.set_xlabel("R [km]", fontsize=12)
-            ax2.set_ylabel("M [M☉]", fontsize=12)
-            ax2.set_title(f"Mass-Radius Relation (M_max={M_max:.3f} M☉)", fontsize=12)
+            ax2.set_ylabel("M [Msun]", fontsize=12)
+            ax2.set_title(f"Mass-Radius Relation (M_max={M_max:.3f} Msun)", fontsize=12)
             ax2.grid(True, alpha=0.3)
+            ax2.set_xlim(0, self.rmax_plot)
             ax2.legend(fontsize=10)
             
             plt.tight_layout()
@@ -510,11 +689,12 @@ class RadialProfiler:
             ax2.plot(R_stable, M_stable, 'k-', linewidth=1.5, alpha=0.7, label='Stable branch')
             if len(R_unstable) > 1:
                 ax2.plot(R_unstable, M_unstable, 'k--', linewidth=1.5, alpha=0.5, label='Unstable branch')
-            ax2.plot(R_final, M_final, 'r*', markersize=20, label=f'This star: R={R_final:.2f} km, M={M_final:.3f} M☉')
+            ax2.plot(R_final, M_final, 'r*', markersize=20, label=f'This star: R={R_final:.2f} km, M={M_final:.3f} Msun')
             ax2.set_xlabel("R [km]", fontsize=12)
-            ax2.set_ylabel("M [M☉]", fontsize=12)
-            ax2.set_title(f"Mass-Radius Relation (M_max={M_max:.3f} M☉)", fontsize=12)
+            ax2.set_ylabel("M [Msun]", fontsize=12)
+            ax2.set_title(f"Mass-Radius Relation (M_max={M_max:.3f} Msun)", fontsize=12)
             ax2.grid(True, alpha=0.3)
+            ax2.set_xlim(0, self.rmax_plot)
             ax2.legend(fontsize=10)
             
             plt.tight_layout()
@@ -551,20 +731,36 @@ def process_single_file_radial(file_args):
     
     try:
         # Read EOS
-        data_dict, colnames = read_eos_csv_multi(input_file)
-        eos_multi = EOSMulti(data_dict, colnames)
+        eos = EOS.from_file(input_file)
         
         # Create output folder for this EOS
         eos_output = os.path.join(args_dict['output'], base_name)
-        profiler = RadialProfiler(eos_multi, output_folder=eos_output)
+        profiler = RadialProfiler(eos, output_folder=eos_output, rmax_plot=args_dict.get('rmax_plot', 20.0), timeout_value=args_dict.get('timeout', 10.0))
         
         # Generate profiles based on mode
-        if args_dict.get('target_masses') or args_dict.get('target_radii'):
+        profiles = []
+        
+        if args_dict.get('max_mass') or args_dict.get('target_masses') or args_dict.get('target_radii'):
             # Target mode
-            profiles = profiler.generate_target_profiles(
-                target_masses=args_dict.get('target_masses'),
-                target_radii=args_dict.get('target_radii')
-            )
+            # Find maximum mass star
+            if args_dict.get('max_mass'):
+                prof = profiler.find_maximum_mass_star(precision=0.001)
+                if prof:
+                    profiles.append(prof)
+            
+            # Find stars by mass
+            if args_dict.get('target_masses'):
+                for target_M in args_dict['target_masses']:
+                    prof = profiler.find_star_by_mass(target_M)
+                    if prof:
+                        profiles.append(prof)
+            
+            # Find stars by radius
+            if args_dict.get('target_radii'):
+                for target_R in args_dict['target_radii']:
+                    prof = profiler.find_star_by_radius(target_R)
+                    if prof:
+                        profiles.append(prof)
         else:
             # Default mode: sample across pressure range
             profiles = profiler.generate_profiles(num_stars=args_dict['num_stars'])
@@ -629,16 +825,19 @@ def process_batch_radial(args):
     print(f"Found {len(csv_files)} CSV files in {input_dir}")
     print(f"Processing with {args.workers} parallel workers")
     print(f"Output directory: {args.output}")
-    print(f"Profiles per file: {args.num_stars if not args.target_mass and not args.target_radius else 'target-based'}")
+    print(f"Profiles per file: {args.num_stars if not args.max_mass and not args.target_mass and not args.target_radius else 'target-based'}")
     print(f"{'='*70}\n")
     
     # Prepare arguments for each file
     args_dict = {
         'output': args.output,
         'num_stars': args.num_stars,
+        'max_mass': args.max_mass,
         'target_masses': args.target_mass if hasattr(args, 'target_mass') else None,
         'target_radii': args.target_radius if hasattr(args, 'target_radius') else None,
-        'save_png': args.save_png
+        'save_png': args.save_png,
+        'rmax_plot': args.rmax_plot,
+        'timeout': args.timeout
     }
     
     file_args_list = [(str(f), args_dict) for f in csv_files]
@@ -718,7 +917,7 @@ Shows M(r), p(r), e(r) from center to surface.""",
 Examples:
   python radial.py inputCode/hsdd2.csv                 # 10 stars (default)
   python radial.py inputCode/test.csv -n 20            # 20 radial profiles
-  python radial.py inputCode/hsdd2.csv -M 1.4          # Star closest to 1.4 M☉
+  python radial.py inputCode/hsdd2.csv -M 1.4          # Star closest to 1.4 Msun
   python radial.py inputCode/hsdd2.csv -R 12.0         # Star closest to 12 km
   python radial.py inputCode/hsdd2.csv -M 1.4 -M 2.0   # Multiple masses
   python radial.py inputCode/hsdd2.csv -M 1.4 -R 12    # By mass AND radius
@@ -734,11 +933,17 @@ Output: export/radial_profiles/json/ (JSON data)
         parser.add_argument('-o', '--output', default=DEFAULT_OUTPUT,
                           help=f'Output folder (default: {DEFAULT_OUTPUT})')
         parser.add_argument('-M', '--mass', type=float, action='append',
-                          help='Generate profile for star closest to this mass [M☉]. Can be used multiple times.')
+                          help='Generate profile for star closest to this mass [Msun]. Can be used multiple times.')
         parser.add_argument('-R', '--radius', type=float, action='append',
                           help='Generate profile for star closest to this radius [km]. Can be used multiple times.')
+        parser.add_argument('--max-mass', action='store_true',
+                          help='Generate profile at maximum mass (M_max) with precision < 0.001 Msun')
         parser.add_argument('--save-png', action='store_true',
                           help='Also save PNG versions of plots (for README/web, default: PDF only)')
+        parser.add_argument('--rmax-plot', type=float, default=20.0,
+                          help='Maximum radius for M-R plot axis (default: 20 km, does not affect data)')
+        parser.add_argument('--timeout', type=float, default=10.0,
+                          help='Timeout for each star calculation in seconds (default: 10, 0 = no timeout)')
         
         # Batch processing options
         parser.add_argument('-b', '--batch', type=str,
@@ -762,22 +967,28 @@ Output: export/radial_profiles/json/ (JSON data)
             sys.exit(0)
     
     # Step 1: read all columns from the EOS file
-    data_dict, colnames = read_eos_csv_multi(args.input)
-    eos = EOSMulti(data_dict, colnames)
+    eos = EOS.from_file(args.input)
     
     # Greet the user with comedic style!
-    npts = len(data_dict["p"])
-    print(f"We read {npts} data points (and {len(colnames)} columns) from '{args.input}'. All in code units. Good job!")
+    npts = len(eos.p_table)
+    num_cols = len(eos.colnames) + len(eos.string_dict)
+    print(f"We read {npts} data points (and {num_cols} columns) from '{args.input}'. All in code units. Good job!")
     
     # Step 2: create our radial profiler object, oh boy oh boy!
-    profiler = RadialProfiler(eos, output_folder=args.output)
+    profiler = RadialProfiler(eos, output_folder=args.output, rmax_plot=args.rmax_plot, timeout_value=args.timeout)
     
     # Step 3: generate radial profiles
     profiles = []
     
     # Check if user specified specific mass or radius values
-    if args.mass or args.radius:
+    if args.max_mass or args.mass or args.radius:
         print("\nFinding stars with specific M or R values...\n")
+        
+        # Find maximum mass star
+        if args.max_mass:
+            prof = profiler.find_maximum_mass_star(precision=0.01)
+            if prof:
+                profiles.append(prof)
         
         # Find stars by mass
         if args.mass:
