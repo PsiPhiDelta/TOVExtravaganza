@@ -185,7 +185,10 @@ class TidalCalculator:
         else:
             Lambda = 0.0
         
-        return {
+        # Get all EOS column values at central pressure
+        central_values = self.eos.get_all_values_at_pressure(central_p)
+        
+        result = {
             'R': R,
             'M_code': M_code,
             'M_solar': M_solar,
@@ -194,6 +197,12 @@ class TidalCalculator:
             'compactness': C,
             'y_R': y_R
         }
+        
+        # Add central values with 'central_' prefix
+        for col, val in central_values.items():
+            result[f'central_{col}'] = val
+        
+        return result
     
     def compute_sequence(self, num_stars=100, p_min=None, p_max=None):
         """
