@@ -2,6 +2,10 @@
 
 import os
 import sys
+import argparse
+from multiprocessing import Pool, cpu_count
+from pathlib import Path
+import time
 
 ###############################################################################
 # OH BOY OH BOY, WE HAVE OUR PHYSICAL CONSTANTS IN SI
@@ -209,6 +213,174 @@ class EOSConverter:
         return count
 
 
+###############################################################################
+# BATCH PROCESSING FUNCTIONS FOR PARALLEL EXECUTION
+###############################################################################
+def process_single_file_converter(file_args):
+    """
+    Process a single EOS file for unit conversion (designed for parallel execution).
+    
+    Parameters:
+    -----------
+    file_args : tuple
+        (input_file, args_dict) where args_dict contains conversion parameters
+        
+    Returns:
+    --------
+    dict with status, filename, and results or error message
+    """
+    input_file, args_dict = file_args
+    base_name = os.path.basename(input_file)
+    
+    try:
+        # Create converter
+        converter = EOSConverter()
+        
+        # Read file
+        has_header = args_dict.get('has_header', True)
+        lines, header_cols, data_start_index, num_cols = converter.read_csv_file(input_file, has_header)
+        
+        if lines is None:
+            return {
+                'status': 'error',
+                'filename': base_name,
+                'error': 'Empty file or read error'
+            }
+        
+        # Get conversion parameters
+        pcol = args_dict['pcol']
+        ecol = args_dict['ecol']
+        choice = args_dict['system']
+        
+        # Get factors
+        pFactor, eFactor, system_desc = converter.get_factors_for_system(choice)
+        if pFactor is None:
+            return {
+                'status': 'error',
+                'filename': base_name,
+                'error': 'Invalid system choice'
+            }
+        
+        # Output path
+        output_dir = args_dict['output_dir']
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, base_name)
+        
+        # Convert and write
+        count = converter.convert_and_write(
+            input_file, output_path, pcol, ecol, pFactor, eFactor,
+            system_desc, header_cols, data_start_index
+        )
+        
+        if count == 0:
+            return {
+                'status': 'error',
+                'filename': base_name,
+                'error': 'No valid data lines converted'
+            }
+        
+        return {
+            'status': 'success',
+            'filename': base_name,
+            'lines_converted': count,
+            'output_path': output_path,
+            'system': system_desc
+        }
+        
+    except Exception as e:
+        return {
+            'status': 'error',
+            'filename': base_name,
+            'error': str(e)
+        }
+
+
+def process_batch_converter(args):
+    """
+    Process all EOS files in a directory in parallel for unit conversion.
+    
+    Parameters:
+    -----------
+    args : argparse.Namespace
+        Command-line arguments
+    """
+    input_dir = Path(args.batch)
+    
+    # Find all CSV files
+    csv_files = list(input_dir.glob('*.csv'))
+    
+    if not csv_files:
+        print(f"No CSV files found in directory: {input_dir}")
+        return
+    
+    print(f"\n{'='*70}")
+    print(f"BATCH CONVERTER MODE - oh boy oh boy!")
+    print(f"{'='*70}")
+    print(f"Found {len(csv_files)} CSV files in {input_dir}")
+    print(f"Processing with {args.workers} parallel workers")
+    print(f"Output directory: {args.output}")
+    print(f"Pressure column: {args.pcol} (1-based)")
+    print(f"Energy column: {args.ecol} (1-based)")
+    print(f"Unit system: {args.system}")
+    print(f"{'='*70}\n")
+    
+    # Prepare arguments for each file
+    args_dict = {
+        'pcol': args.pcol - 1,  # Convert to 0-based
+        'ecol': args.ecol - 1,  # Convert to 0-based
+        'system': str(args.system),
+        'output_dir': args.output,
+        'has_header': args.header
+    }
+    
+    file_args_list = [(str(f), args_dict) for f in csv_files]
+    
+    # Process files in parallel
+    start_time = time.time()
+    
+    if args.workers == 1:
+        # Sequential processing
+        results = [process_single_file_converter(fa) for fa in file_args_list]
+    else:
+        # Parallel processing
+        with Pool(processes=args.workers) as pool:
+            results = pool.map(process_single_file_converter, file_args_list)
+    
+    elapsed = time.time() - start_time
+    
+    # Print summary
+    print(f"\n{'='*70}")
+    print(f"BATCH CONVERTER COMPLETE!")
+    print(f"{'='*70}")
+    
+    successful = [r for r in results if r['status'] == 'success']
+    failed = [r for r in results if r['status'] == 'error']
+    
+    print(f"\nProcessed {len(results)} files in {elapsed:.2f} seconds")
+    print(f"  ✓ Successful: {len(successful)}")
+    print(f"  ✗ Failed: {len(failed)}")
+    
+    if successful:
+        total_lines = sum(r['lines_converted'] for r in successful)
+        print(f"\n{'='*70}")
+        print("SUCCESSFUL FILES:")
+        print(f"{'='*70}")
+        for r in successful:
+            print(f"  {r['filename']:20s} => {r['lines_converted']:4d} lines ({r['system']})")
+        print(f"\nTotal data lines converted: {total_lines}")
+    
+    if failed:
+        print(f"\n{'='*70}")
+        print("FAILED FILES:")
+        print(f"{'='*70}")
+        for r in failed:
+            print(f"  {r['filename']:20s} => Error: {r['error']}")
+    
+    print(f"\n{'='*70}")
+    print(f"All converted files saved to: {args.output}")
+    print(f"{'='*70}\n")
+
+
 def main():
     """
     This script:
@@ -233,6 +405,33 @@ def main():
         system: 0-4 (0=code, 1=MeV^-4, 2=MeV*fm^-3, 3=fm^-4, 4=CGS)
         output_file: optional output path (default: inputCode/<input_file>)
     """
+    # Check for batch mode first (with argparse)
+    if '--batch' in sys.argv or '-b' in sys.argv:
+        parser = argparse.ArgumentParser(
+            description="Batch EOS Unit Converter - oh boy oh boy!",
+            formatter_class=argparse.RawDescriptionHelpFormatter
+        )
+        parser.add_argument('-b', '--batch', type=str, required=True,
+                          help='Batch mode: process all CSV files in the specified directory')
+        parser.add_argument('-p', '--pcol', type=int, default=1,
+                          help='Pressure column (1-based, default: 1)')
+        parser.add_argument('-e', '--ecol', type=int, default=2,
+                          help='Energy density column (1-based, default: 2)')
+        parser.add_argument('-s', '--system', type=int, default=2, choices=[0, 1, 2, 3, 4],
+                          help='Unit system: 0=code, 1=MeV^-4, 2=MeV*fm^-3 (default), 3=fm^-4, 4=CGS')
+        parser.add_argument('-o', '--output', default='inputCode',
+                          help='Output directory (default: inputCode)')
+        parser.add_argument('--header', action='store_true', default=True,
+                          help='Files have header row (default: True)')
+        parser.add_argument('--no-header', dest='header', action='store_false',
+                          help='Files do NOT have header row')
+        parser.add_argument('-w', '--workers', type=int, default=cpu_count(),
+                          help=f'Number of parallel workers (default: {cpu_count()} = CPU count)')
+        
+        args = parser.parse_args()
+        process_batch_converter(args)
+        return
+    
     print("===== TOV CODE-UNITS: THE BIG 4 FACTORS EDITION! =====")
     
     # Create our converter object, oh boy oh boy!
