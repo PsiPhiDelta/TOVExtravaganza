@@ -4,6 +4,75 @@ All notable changes to TOV Extravaganza.
 
 ---
 
+## [1.5.0] - 2025-10-19
+
+### Added
+- **HDF5 Storage Format** 💾 – Efficient binary storage for radial profiles
+  - 10-100x smaller files than JSON (with gzip compression)
+  - Fast read/write for large datasets with 10,000+ radial points
+  - Standard scientific format (Python, MATLAB, Julia, R compatible)
+  - Automatic fallback to JSON if h5py not installed
+  - Install with: `pip install tovextravaganza[hdf5]`
+  
+- **Maximum Mass Profile** 🎯 – New `--max-mass` flag for radial profiles
+  - Automatically finds M_max with precision < 0.01 M☉
+  - Fast adaptive search (50 coarse + 200 fine points)
+  - Only computes full radial profile once at M_max
+  - Works in both single-file and batch modes
+  - Example: `tovx-radial --batch inputCode/Batch/ --max-mass`
+
+- **Timeout Protection** ⏱️ – Prevent hanging on problematic configurations
+  - Default: 10 seconds per star (configurable with `--timeout`)
+  - Gracefully skips stuck calculations and continues
+  - Works in TOV solver, radial profiles, and batch modes
+  - Example: `tovx --batch inputCode/ --timeout 20`
+
+- **Plot Viewport Control** 📊 – New `--rmax-plot` parameter
+  - Zoom M-R plots to specific radius range (default: 20 km)
+  - Only changes axis limits, doesn't crop data
+  - Applies to all M-R diagrams in TOV and radial plots
+  - Example: `tovx inputCode/hsdd2.csv --rmax-plot 15`
+
+- **Phase-Coded Radial Plots** 🎨 – Beautiful visualization of internal structure
+  - Color-coded by phase (Hadronic=blue, 2SC=orange, CFL=red)
+  - Shows M(r), p(r), ε(r), n(r) from center to surface
+  - High-resolution PNG output (200 DPI) for publications
+  - Physical units: pressure & energy in MeV/fm³, number density in fm⁻³
+
+- **Utility Modules**
+  - `tovextravaganza.utils.timeout` – Cross-platform timeout decorator
+  - `tovextravaganza.utils.read_radial_hdf5` – HDF5 data reader with examples
+
+### Improved
+- **Energy-Based String Interpolation** 🔬 – Critical fix for phase transitions
+  - String columns (phase labels) now use energy density for nearest-neighbor search
+  - Correctly handles first-order phase transitions where pressure plateaus
+  - More robust than pressure-based approach for discontinuous transitions
+  - Applies to ALL string columns, not just "phase"
+
+- **Radial Profile Performance** ⚡ – Massive speed improvements
+  - M-R curve calculation: Only computes M & R (not full profiles)
+  - M_max search: Fast TOV solve (250 points in seconds, not minutes)
+  - Full column interpolation: Only when generating actual profiles
+  - ~100x faster for large EOS tables (20,000 points)
+
+- **All EOS Column Tracking** 📋 – Complete data preservation
+  - TOV solver: Tracks all columns at central pressure
+  - Radial profiles: Interpolates all columns at each radial point
+  - Supports mixed numeric and string columns
+  - Dynamic CSV headers based on available columns
+
+- **Windows Compatibility** 🪟 – Fixed Unicode encoding issues
+  - Replaced M☉ symbols with "Msun" in terminal output
+  - All print statements now work on Windows CMD/PowerShell
+  - No more UnicodeEncodeError crashes
+
+### Changed
+- **Default timeout**: Now 10 seconds (was 60s in initial implementation)
+- **Optional dependency**: h5py now in `[hdf5]` and `[all]` extras
+
+---
+
 ## [1.4.2] - 2025-10-19
 
 ### Fixed

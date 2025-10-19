@@ -94,7 +94,7 @@ class TidalWriter:
         if not os.path.exists(self.plot_folder):
             os.makedirs(self.plot_folder)
     
-    def write_results(self, results, base_name, show_plot=True, save_png=False):
+    def write_results(self, results, base_name, show_plot=True, save_png=False, rmax_plot=20.0):
         """
         Write tidal results to CSV and generate plots.
         
@@ -106,6 +106,8 @@ class TidalWriter:
             Base filename
         save_png : bool
             If True, also save PNG versions (default: False)
+        rmax_plot : float
+            Maximum radius for plot x-axis (default: 20.0 km)
             
         Returns:
         --------
@@ -174,6 +176,7 @@ class TidalWriter:
             ax1.set_ylabel('Mass (solar masses)', fontsize=12)
             ax1.set_title(f'Mass-Radius - {base_name}', fontsize=13)
             ax1.grid(True, alpha=0.3)
+            ax1.set_xlim(0, rmax_plot)  # Crop x-axis view only
             
             # Plot 2: Lambda vs M
             ax2.plot(M_arr, Lambda_arr, 'o-', markersize=4, color='red', label='EoS prediction')
