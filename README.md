@@ -903,26 +903,76 @@ Structured JSON with full radial arrays for each star.
 
 ## ⚙️ Command Reference
 
-### tov.py
+### tovx (tov.py) - TOV Solver
 
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
-| `input` | positional | required | Input EOS file path |
-| `-n, --num-stars` | int | 200 | Number of stars to compute |
-| `-o, --output` | str | export/stars | Output folder |
-| `--dr` | float | 0.0005 | Radial step size |
-| `--rmax` | float | 100.0 | Maximum radius |
-| `--quiet` | flag | False | Suppress output |
-| `--no-plot` | flag | False | Skip all plots |
-| `--no-show` | flag | False | Don't display plot window |
+| `input` | positional | required | Input EOS file path (e.g., `inputCode/hsdd2.csv`) |
+| `-n, --num-stars` | int | 200 | Number of stars to compute across central pressure range |
+| `-o, --output` | str | export/stars | Output folder for CSV and plots |
+| `--dr` | float | 0.0005 | Radial step size for integration [km] |
+| `--rmax` | float | 100.0 | Maximum radius before integration stops [km] |
+| `--rmax-plot` | float | 20.0 | Maximum radius for plot x-axis [km] (data not cropped) |
+| `--timeout` | float | 10.0 | Timeout per star calculation [seconds] (0 = no timeout) |
+| `-q, --quiet` | flag | False | Suppress per-star output |
+| `--no-plot` | flag | False | Skip plotting entirely |
+| `--no-show` | flag | False | Don't display plot window (still saves to file) |
+| `--save-png` | flag | False | Also save PNG versions of plots (default: PDF only) |
+| `-b, --batch` | str | None | Batch mode: process all CSV files in specified directory |
+| `-w, --workers` | int | CPU count | Number of parallel workers for batch mode |
 
-### radial.py
+**Example:**
+```bash
+tovx inputCode/hsdd2.csv -n 500 --rmax-plot 15 --timeout 20
+```
+
+### tovx-radial (radial.py) - Radial Profiler
 
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
-| `input` | positional | required | Input EOS file path |
-| `-n, --num-stars` | int | 10 | Number of profiles |
-| `-o, --output` | str | export/radial_profiles | Output folder |
+| `input` | positional | required | Input EOS file path (e.g., `inputCode/hsdd2.csv`) |
+| `-n, --num-stars` | int | 10 | Number of profiles to generate (evenly spaced in mass) |
+| `-o, --output` | str | export/radial_profiles | Output folder for HDF5/JSON and plots |
+| `-M, --mass` | float | None | Generate profile at this mass [M☉] (can use multiple times) |
+| `-R, --radius` | float | None | Generate profile at this radius [km] (can use multiple times) |
+| `--max-mass` | flag | False | Generate profile at M_max with precision < 0.001 M☉ |
+| `--rmax-plot` | float | 20.0 | Maximum radius for M-R plot x-axis [km] (data not cropped) |
+| `--timeout` | float | 10.0 | Timeout per star calculation [seconds] (0 = no timeout) |
+| `--save-png` | flag | False | Also save PNG versions of plots (default: PDF only) |
+| `-b, --batch` | str | None | Batch mode: process all CSV files in specified directory |
+| `-w, --workers` | int | CPU count | Number of parallel workers for batch mode |
+
+**Example:**
+```bash
+tovx-radial inputCode/hsdd2.csv -M 1.4 -M 2.0 --max-mass
+tovx-radial --batch inputCode/Batch/ --max-mass --timeout 60
+```
+
+### tovx-converter (converter.py) - Unit Converter
+
+| Argument | Type | Default | Description |
+|----------|------|---------|-------------|
+| `-b, --batch` | str | required | Batch mode: convert all CSV files in specified directory |
+| `-p, --pcol` | int | None | Pressure column number (1-based, prompted if not provided) |
+| `-e, --ecol` | int | None | Energy density column number (1-based, prompted if not provided) |
+| `-s, --system` | int | None | Unit system: 0=code, 1=MeV⁻⁴, 2=MeV·fm⁻³, 3=fm⁻⁴, 4=CGS |
+| `-o, --output` | str | inputCode | Output directory (auto-creates `inputCode/Batch/` for batch) |
+| `--header` | flag | True | Input files have header row (default) |
+| `--no-header` | flag | False | Input files do NOT have header row |
+| `-w, --workers` | int | CPU count | Number of parallel workers |
+
+**Unit System Reference:**
+- **0**: Code units (no conversion)
+- **1**: MeV⁻⁴ → multiply by 1.32379×10⁻⁶
+- **2**: MeV·fm⁻³ → divide by 1.32379×10⁻⁶
+- **3**: fm⁻⁴ → multiply by (197.33 MeV·fm)⁻⁴ × 1.32379×10⁻⁶
+- **4**: CGS → multiply by G×c⁻⁴ (for p, ε in g/cm³)
+
+**Example:**
+```bash
+tovx-converter --batch inputRaw/Batch/ -p 2 -e 1 -s 3
+tovx-converter --batch inputRaw/ -s 2 --no-header
+```
 
 ---
 
