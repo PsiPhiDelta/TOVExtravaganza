@@ -118,7 +118,9 @@ The wizard will:
 - 📊 Show you exactly where results are
 - 🎉 Celebrate your success!
 
-### Workflow 2: Command-Line (Advanced)
+**Oh boy oh boy, so easy!**
+
+### Workflow 2: Command-Line (For Power Users!)
 
 **If installed via pip:**
 ```bash
@@ -211,8 +213,8 @@ python -m tovextravaganza.cli.tov inputCode/hsdd2.csv -n 200
   - Mass `M_solar` [M☉]
   - Tidal deformability `Lambda` (dimensionless)
   - Love number `k2`
-  - **Automatic:** All EOS columns at central pressure (`central_e`, `central_n`, `central_phase`, etc.)
-- **Plots:** `export/stars/plots/hsdd2.pdf`
+  - Any additional central columns from the EOS
+- **Plots:** `export/stars/plots/hsdd2.pdf` (and `.png` if using `--save-png`)
 
 **Example plot:**
 
@@ -237,14 +239,13 @@ python -m tovextravaganza.cli.radial inputCode/hsdd2.csv -M 1.4
 
 **What happens:**
 1. Searches for the star closest to 1.4 M☉
-2. Computes full radial profile: M(r), p(r) at each radius point
-3. **Automatically interpolates** all EOS columns at each radial point: ε(r), n(r), μ(r), phase(r), etc.
-4. Saves all data to HDF5 format (or JSON if h5py not installed)
-5. Generates plots with M-R context
+2. Computes full radial profile: M(r), p(r), ε(r), n(r), etc.
+3. Saves all data to HDF5 format
+4. Generates plots with M-R context
 
 **Output:**
-- **Data:** `export/radial_profiles/json/hsdd2.h5` (HDF5 format if h5py installed, otherwise JSON)
-- **Plots:** Two PDFs with M-R context:
+- **Data:** `export/radial_profiles/json/hsdd2.h5` (HDF5 format - efficient binary)
+- **Plots:** Two PDFs (and `.png` if using `--save-png`):
 
 **Mass Profile:**
 
@@ -266,7 +267,7 @@ Process **multiple EOS files in parallel** for high-throughput analysis.
 
 ### Scenario: Analyze 6 Quark Matter EOS Models
 
-You have 6 raw EOS files in `inputRaw/Batch/` with different parameters (CSC and RGNJL series from [arXiv:2411.04064](https://arxiv.org/abs/2411.04064)). Let's process them all efficiently.
+You have 6 raw EOS files in `inputRaw/Batch/` with different parameters (CSC and RGNJL series). Let's process them all efficiently.
 
 ### Step 1: Batch Convert to Code Units
 
@@ -300,14 +301,8 @@ tovx --batch inputCode/Batch/ -n 1000 -o export/batch_all --workers 6
 python -m tovextravaganza.cli.tov --batch inputCode/Batch/ -n 1000 -o export/batch_all --workers 6
 ```
 
-**What happens:**
-- For each star, **automatically interpolates** all EOS columns at the central pressure
-- Saves not just M, R, Λ, k₂ but also central energy density, number density, phase labels, etc.
-- Lets you track how interior conditions (density, phase transitions) vary with stellar mass
-
 **Output:**
 - 6 CSV files with ~250-1000 stars each (R < 99 km filter)
-- Each CSV includes: `p_c, R, M_solar, Lambda, k2, central_e, central_n, central_phase, ...`
 - 6 sets of M-R, Λ(M), k₂(M) plots
 - Completed in ~30-60 seconds (parallel processing!)
 
@@ -336,30 +331,16 @@ python -m tovextravaganza.cli.radial --batch inputCode/Batch/ --max-mass -o expo
 **What happens:**
 1. Each EOS: Fast M_max search (50 coarse + 200 fine = 250 TOV solves)
 2. Finds M_max with precision < 0.01 M☉
-3. Computes full radial profile with **automatic interpolation** of all EOS columns at each radius:
-   - Numeric columns → interpolated
-   - String columns → nearest value
-4. Saves everything to HDF5 (or JSON) - complete radial data for post-processing
-5. Generates M(r) and p(r) plots with M-R context
+3. Computes full radial profile with all EOS columns
+4. Generates M(r) and p(r) plots with M-R context
+5. Saves to HDF5 format (efficient!)
 
 **Output:**
-- 6 HDF5 files in `export/radial_maxmass/*/json/*.h5` with complete radial data
+- 6 HDF5 files in `export/radial_maxmass/*/json/*.h5`
 - 12 plots (Mass and Pressure profiles for each EOS)
 - **Total time: ~30 seconds** for all 6 files in parallel!
 
-**Because all columns are stored**, you can easily create custom plots like phase-color-coded visualizations:
-
-**Example M-R curves for all 6 EOS models (color-coded by central phase):**
-
-![M-R Curves Phase-Coded](export/all_mr_curves_phase_coded.png)
-
-*M-R curves from [arXiv:2411.04064](https://arxiv.org/abs/2411.04064) showing how central phase changes with mass. Colors: Blue=Hadronic, Orange=2SC, Red=CFL. Line styles: Solid=CSC series, Dashed=RGNJL series. Maximum mass predictions: 1.94 - 2.19 M☉.*
-
-**Example radial profile at M_max (RGNJL v0.70, M_max = 2.06 M☉, R = 12.44 km):**
-
-![Phase-Coded Radial Profile](export/radial_plots/RGNJL_v0.70d1.45_radial_profiles.png)
-
-*Phase-resolved internal structure at maximum mass showing Hadronic → 2SC → CFL transitions. Phase color-coding: Blue=Hadronic, Orange=2SC, Red=CFL. Units: Pressure & energy in MeV/fm³, number density in fm⁻³.*
+**Example result:** RGNJL v0.70 at M_max = 2.06 M☉, R = 12.44 km
 
 ---
 
@@ -514,6 +495,8 @@ export/radial_profiles/
 ### Performance Benefits
 
 - **Parallel Processing**: Uses all CPU cores by default (configurable with `--workers`)
+- **Time Savings**: ~45% faster with 2 workers, scales with more cores
+- **Robust Error Handling**: Individual file failures don't stop the batch
 - **Organized Output**: Each EOS gets its own folder (for radial profiles)
 
 ### Common Options
@@ -782,20 +765,18 @@ where k₂ is the second Love number, obtained by solving a coupled ODE system w
 
 #### Love Number k₂ Calculation
 
-We solve a coupled 4-variable ODE system simultaneously with TOV:
+The tidal perturbation is governed by:
 
 ```
-dM/dr = 4πr²ε
-dp/dr = -(ε + p)(M + 4πr³p) / (r(r - 2M))
-dH/dr = β
-dβ/dr = (2H/F₁)[-2π(5ε + 9p + f(ε+p)) + 3/r² + (2/F₁)(M/r² + 4πrp)²] + (2β/rF₁)[-1 + M/r + 2πr²(ε-p)]
+dy/dr = -(2/r)y - y² - y·F(r) + r²·Q(r)
+dH/dr = y
 ```
 
 where:
+- `y(r) = r·dH/dr / H(r)` is the logarithmic derivative
 - `H(r)` is the metric perturbation function
-- `β(r) = dH/dr` is integrated explicitly for numerical stability
-- `F₁ = 1 - 2M/r` is the metric factor
-- `f = dε/dp` is the EOS stiffness (precomputed using centered differences)
+- `F(r) = (1 - 2M(r)/r)⁻¹ · [2M(r)/r² + 4πr(p(r) - ε(r))]`
+- `Q(r) = (1 - 2M(r)/r)⁻¹ · [4π(5ε(r) + 9p(r) + (ε(r) + p(r))·(dε/dp)) - 6/r² - (2M(r)/r² + 4πr(p(r) - ε(r)))²]`
 
 The Love number k₂ is then extracted at the surface (r = R):
 
@@ -863,6 +844,7 @@ All calculations use **geometric units** where G = c = 1:
 
 - **ODE Integration:** `scipy.integrate.odeint` with rtol=1e-12, atol=1e-14
 - **EOS Interpolation:** Piecewise-linear
+- **Division-by-zero handling:** Small epsilon added to denominator (1e-30)
 - **Boundary conditions:** Start integration at r=1e-5 to avoid r=0 singularity
 
 ### Filtering
@@ -975,6 +957,26 @@ Please maintain the code style and add tests where appropriate.
 - **CompOSE:** https://compose.obspm.fr/
 - **stellarcollapse.org:** Comprehensive EOS tables
 - **RG-NJL EoS Tables (Color-Superconducting Quark Matter):** https://github.com/marcohof/RG-NJL-EoS-tables
+
+---
+
+## 📸 Research Showcase
+
+### Quark Matter Phase Transitions in Neutron Stars
+
+**M-R curves from our research** on hybrid stars with color-superconducting quark matter:
+
+![M-R Curves Showcase](export/all_mr_curves.png)
+
+*Six EOS models showing quark matter phase transitions (CSC and RGNJL series). Solid lines: CSC models; Dashed lines: RGNJL models with hadronic cores. Maximum mass predictions: 1.94 - 2.19 M☉. From arXiv:2411.04064.*
+
+### Internal Structure of Maximum Mass Stars
+
+**Phase-resolved radial profiles at M_max** showing the internal structure from center to surface:
+
+![Phase-Coded Radial Profiles at M_max](export/radial_plots/RGNJL_v0.70d1.45_radial_profiles.png)
+
+*Maximum mass star (M_max = 2.06 M☉, R = 12.44 km) for RGNJL v0.70 EOS. Shows Hadronic → 2SC → CFL phase transitions from center to surface. Top-left: Mass profile M(r). Top-right: Pressure p(r) [MeV/fm³]. Bottom-left: Energy density ε(r) [MeV/fm³]. Bottom-right: Number density n(r) [fm⁻³]. Phase color-coding: Blue=Hadronic, Orange=2SC, Red=CFL.*
 
 ---
 
