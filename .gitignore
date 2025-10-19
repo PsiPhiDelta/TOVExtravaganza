@@ -143,9 +143,10 @@ export/stars/plots/*
 !export/stars/plots/hsdd2.pdf
 !export/stars/plots/hsdd2.png
 
-# Keep overlay M-R curve plot
+# Keep overlay M-R curve plots
 !export/all_mr_curves.png
 !export/all_mr_curves.pdf
+!export/all_mr_curves_phase_coded.png
 
 # Keep phase-coded radial plots (NEW in v1.4.2+)
 !export/radial_plots/

@@ -4,6 +4,24 @@ All notable changes to TOV Extravaganza.
 
 ---
 
+## [1.5.1] - 2025-10-19
+
+### Updated
+- **README Documentation** 📚
+  - Complete comprehensive DD2 tutorial (raw → conversion → TOV → radial → max mass)
+  - Batch processing tutorial with step-by-step guide
+  - Detailed explanation of all new features and flags
+  - Full dβ/dr tidal perturbation equation now documented
+  - Phase-color-coded showcase plots added
+  - Improved organization and clarity throughout
+
+- **Phase-Coded M-R Plot** 🎨
+  - Better color distinction between Hadronic (blue) and 2SC (orange) phases
+  - Clean legend showing phase colors and series line styles
+  - High-quality showcase plot included in README
+
+---
+
 ## [1.5.0] - 2025-10-19
 
 ### Added

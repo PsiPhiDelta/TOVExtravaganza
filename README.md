@@ -12,9 +12,9 @@
 
 ---
 
-## ✨ Features
+## Features
 
-- **Interactive Wizard** 🧙‍♂️ – Beginner-friendly guided workflow (just answer questions!)
+- **Interactive Wizard** – Beginner-friendly guided workflow (just answer questions!)
 - **Mass-Radius Calculations** – Solve TOV equations for multiple central pressures
 - **Tidal Deformability** – Compute dimensionless tidal deformability (Λ) and Love number (k₂)
 - **Batch Processing** 🚀 **NEW!** – Process multiple EOS files in parallel:
@@ -94,26 +94,9 @@ cd TOVExtravaganza
 pip install -e .
 ```
 
-**Why `-e` (editable mode)?**
-- ✅ Changes to code are **immediately reflected** - no reinstall needed!
-- ✅ Perfect for development and testing
-- ✅ Runs `tovx` commands from your local modified files
+The `-e` flag installs in editable mode - any code changes take effect immediately without reinstalling.
 
-> **⚠️ Important:** Regular `pip install tovextravaganza` installs a copy from PyPI. If you want to modify the code, you MUST use `pip install -e .` from the cloned repo!
-
-#### Option 3: Manual (No Installation)
-
-```bash
-git clone https://github.com/PsiPhiDelta/TOVExtravaganza.git
-cd TOVExtravaganza
-pip install -r requirements.txt
-```
-
-Run scripts directly with `python -m tovextravaganza.tov`, etc.
-
-> **Note:** Without `pip install -e .`, the `tovx` commands won't be available - you must use `python -m tovextravaganza.MODULE` syntax.
-
-### Workflow 1: Interactive Wizard 🧙‍♂️ (Easiest - Recommended!)
+### Workflow 1: Interactive Wizard (Easiest - Recommended!)
 
 **Perfect for first-time users!** The wizard guides you through everything:
 
@@ -135,9 +118,7 @@ The wizard will:
 - 📊 Show you exactly where results are
 - 🎉 Celebrate your success!
 
-**Oh boy oh boy, so easy!**
-
-### Workflow 2: Command-Line (For Power Users!)
+### Workflow 2: Command-Line (Advanced)
 
 **If installed via pip:**
 ```bash
@@ -155,6 +136,230 @@ python -m tovextravaganza.converter
 ```
 
 **That's it!** Results appear in the `export/` folder.
+
+---
+
+## 📚 Complete Tutorial: DD2 Equation of State
+
+This tutorial shows the **complete workflow** from raw EOS data to publication-quality results using the HS(DD2) equation of state as an example.
+
+### Step 0: Get Example Files
+
+First, download the demo EOS files:
+
+```bash
+# Via pip
+tovx-demo
+
+# From source
+python -m tovextravaganza.utils.demo
+```
+
+This downloads example files including `hsdd2.csv` to both `inputRaw/` and `inputCode/` directories.
+
+### Step 1: Convert Raw EOS to Code Units
+
+**Input:** `inputRaw/hsdd2.csv` - Raw EOS in CGS units (g/cm³ and dyn/cm²)
+
+**Goal:** Convert to dimensionless TOV code units
+
+```bash
+# Via pip
+tovx-converter inputRaw/hsdd2.csv -o inputCode/hsdd2.csv
+
+# From source
+python -m tovextravaganza.cli.converter inputRaw/hsdd2.csv -o inputCode/hsdd2.csv
+```
+
+**What happens:**
+
+The converter will analyze your file and ask:
+```
+Which column is PRESSURE? (1-based index): 2
+Which column is ENERGY DENSITY? (1-based index): 1
+Which unit system?
+  1) MeV^-4
+  2) MeV*fm^-3
+  3) fm^-4
+  4) CGS (g/cm^3, dyn/cm^2)
+Select (1-4): 4
+```
+
+After confirmation, it converts the file and saves to `inputCode/hsdd2.csv`.
+
+**Features:**
+- Automatically preserves ALL additional columns (number density, chemical potential, etc.)
+- Adds header comment showing conversion factors
+- Reorders columns: pressure and energy first (converted), then rest (preserved)
+
+### Step 2: Compute Mass-Radius Sequence & Tidal Deformability
+
+**Goal:** Solve TOV equations for 200 neutron stars with different central pressures
+
+```bash
+# Via pip
+tovx inputCode/hsdd2.csv -n 200
+
+# From source
+python -m tovextravaganza.cli.tov inputCode/hsdd2.csv -n 200
+```
+
+**Output:**
+- **CSV:** `export/stars/csv/hsdd2.csv` containing:
+  - Central pressure `p_c`
+  - Radius `R` [km]
+  - Mass `M_solar` [M☉]
+  - Tidal deformability `Lambda` (dimensionless)
+  - Love number `k2`
+  - **Automatic:** All EOS columns at central pressure (`central_e`, `central_n`, `central_phase`, etc.)
+- **Plots:** `export/stars/plots/hsdd2.pdf`
+
+**Example plot:**
+
+![Mass-Radius Plot](export/stars/plots/hsdd2.png)
+
+The plot shows three panels:
+- **Left:** Mass-Radius relationship
+- **Middle:** Tidal deformability Λ(M) with GW170817 constraint
+- **Right:** Love number k₂(M)
+
+### Step 3: Generate Internal Structure Profiles
+
+**Goal:** Get detailed radial profiles showing the star's interior from center to surface
+
+```bash
+# Via pip
+tovx-radial inputCode/hsdd2.csv -M 1.4
+
+# From source
+python -m tovextravaganza.cli.radial inputCode/hsdd2.csv -M 1.4
+```
+
+**What happens:**
+1. Searches for the star closest to 1.4 M☉
+2. Computes full radial profile: M(r), p(r) at each radius point
+3. **Automatically interpolates** all EOS columns at each radial point: ε(r), n(r), μ(r), phase(r), etc.
+4. Saves all data to HDF5 format (or JSON if h5py not installed)
+5. Generates plots with M-R context
+
+**Output:**
+- **Data:** `export/radial_profiles/json/hsdd2.h5` (HDF5 format if h5py installed, otherwise JSON)
+- **Plots:** Two PDFs with M-R context:
+
+**Mass Profile:**
+
+![Mass Profile](export/radial_profiles/plots/Mass/mass_profile_0.png)
+
+**Pressure Profile:**
+
+![Pressure Profile](export/radial_profiles/plots/Pressure/pressure_profile_0.png)
+
+Each plot:
+- **Left Panel:** Radial profile from center to surface
+- **Right Panel:** Full M-R curve with ⭐ marking this star's position
+
+---
+
+## 🚀 Batch Processing Tutorial: Multiple EOS Files
+
+Process **multiple EOS files in parallel** for high-throughput analysis.
+
+### Scenario: Analyze 6 Quark Matter EOS Models
+
+You have 6 raw EOS files in `inputRaw/Batch/` with different parameters (CSC and RGNJL series from [arXiv:2411.04064](https://arxiv.org/abs/2411.04064)). Let's process them all efficiently.
+
+### Step 1: Batch Convert to Code Units
+
+Convert all 6 files simultaneously:
+
+```bash
+# Via pip
+tovx-converter --batch inputRaw/Batch/ --pcol 2 --ecol 1 --system 3 --workers 6
+
+# From source
+python -m tovextravaganza.cli.converter --batch inputRaw/Batch/ --pcol 2 --ecol 1 --system 3 --workers 6
+```
+
+**Parameters:**
+- `--pcol 2`: Pressure is in column 2
+- `--ecol 1`: Energy density is in column 1  
+- `--system 3`: Units are fm⁻⁴
+- `--workers 6`: Use 6 parallel workers
+
+**Result:** All files converted to `inputCode/Batch/` in ~2-5 seconds
+
+### Step 2: Batch Compute M-R Curves
+
+Compute M-R sequences for all 6 EOS files:
+
+```bash
+# Via pip
+tovx --batch inputCode/Batch/ -n 1000 -o export/batch_all --workers 6
+
+# From source
+python -m tovextravaganza.cli.tov --batch inputCode/Batch/ -n 1000 -o export/batch_all --workers 6
+```
+
+**What happens:**
+- For each star, **automatically interpolates** all EOS columns at the central pressure
+- Saves not just M, R, Λ, k₂ but also central energy density, number density, phase labels, etc.
+- Lets you track how interior conditions (density, phase transitions) vary with stellar mass
+
+**Output:**
+- 6 CSV files with ~250-1000 stars each (R < 99 km filter)
+- Each CSV includes: `p_c, R, M_solar, Lambda, k2, central_e, central_n, central_phase, ...`
+- 6 sets of M-R, Λ(M), k₂(M) plots
+- Completed in ~30-60 seconds (parallel processing!)
+
+**Results Summary:**
+```
+CSC_v0.70d1.45   => M_max = 1.94 M☉
+CSC_v0.80d1.50   => M_max = 2.08 M☉
+CSC_v0.85d1.50   => M_max = 2.11 M☉
+RGNJL_v0.70d1.45 => M_max = 2.06 M☉
+RGNJL_v0.80d1.50 => M_max = 2.09 M☉
+RGNJL_v0.85d1.50 => M_max = 2.19 M☉
+```
+
+### Step 3: Batch Radial Profiles at Maximum Mass
+
+Generate internal structure profiles at M_max for all 6 EOS:
+
+```bash
+# Via pip
+tovx-radial --batch inputCode/Batch/ --max-mass -o export/radial_maxmass --workers 6
+
+# From source
+python -m tovextravaganza.cli.radial --batch inputCode/Batch/ --max-mass -o export/radial_maxmass --workers 6
+```
+
+**What happens:**
+1. Each EOS: Fast M_max search (50 coarse + 200 fine = 250 TOV solves)
+2. Finds M_max with precision < 0.01 M☉
+3. Computes full radial profile with **automatic interpolation** of all EOS columns at each radius:
+   - Numeric columns → interpolated
+   - String columns → nearest value
+4. Saves everything to HDF5 (or JSON) - complete radial data for post-processing
+5. Generates M(r) and p(r) plots with M-R context
+
+**Output:**
+- 6 HDF5 files in `export/radial_maxmass/*/json/*.h5` with complete radial data
+- 12 plots (Mass and Pressure profiles for each EOS)
+- **Total time: ~30 seconds** for all 6 files in parallel!
+
+**Because all columns are stored**, you can easily create custom plots like phase-color-coded visualizations:
+
+**Example M-R curves for all 6 EOS models (color-coded by central phase):**
+
+![M-R Curves Phase-Coded](export/all_mr_curves_phase_coded.png)
+
+*M-R curves from [arXiv:2411.04064](https://arxiv.org/abs/2411.04064) showing how central phase changes with mass. Colors: Blue=Hadronic, Orange=2SC, Red=CFL. Line styles: Solid=CSC series, Dashed=RGNJL series. Maximum mass predictions: 1.94 - 2.19 M☉.*
+
+**Example radial profile at M_max (RGNJL v0.70, M_max = 2.06 M☉, R = 12.44 km):**
+
+![Phase-Coded Radial Profile](export/radial_plots/RGNJL_v0.70d1.45_radial_profiles.png)
+
+*Phase-resolved internal structure at maximum mass showing Hadronic → 2SC → CFL transitions. Phase color-coding: Blue=Hadronic, Orange=2SC, Red=CFL. Units: Pressure & energy in MeV/fm³, number density in fm⁻³.*
 
 ---
 
@@ -178,77 +383,6 @@ tovx-wizard
 ```
 
 **That's it!** The wizard does everything for you!
-
-### Mass-Radius Relationship
-
-For advanced users, run the TOV solver directly:
-
-**Via pip:**
-```bash
-tovx inputCode/hsdd2.csv
-```
-
-**From source:**
-```bash
-python -m tovextravaganza.tov inputCode/hsdd2.csv
-```
-
-Creates:
-- **M-R Curve**: Mass vs. Radius for the entire EoS
-- **Tidal Properties**: Λ(M) and k₂(M) relationships
-- **Key Results**: Maximum mass (~2.4 M☉ for HS(DD2) EoS), R @ 1.4 M☉ (~13 km)
-
-![Mass-Radius Plot](export/stars/plots/hsdd2.png)
-
-### Comparative M-R Curves
-
-**NEW!** Compare multiple EOS models on a single M-R diagram:
-
-![M-R Curves Comparison](export/all_mr_curves.png)
-
-*Overlay of 6 different EOS models showing quark matter phase transitions (CSC and RGNJL series). Solid lines: CSC models with color superconductivity; Dashed lines: RGNJL models with hadronic cores. Demonstrates range of predictions for maximum mass (1.94 - 2.19 M☉) and radius constraints.*
-
-### Internal Structure Profiles
-
-Running `radial.py` reveals the **internal structure** from center to surface:
-
-**Example Output:**
-```bash
-python -m tovextravaganza.radial inputCode/hsdd2.csv -M 1.4 -M 2.0
-```
-
-Each profile shows:
-- **Left Panel**: M(r) or p(r) radial profile from center to surface
-- **Right Panel**: Full M-R curve with a ⭐ showing where this star lies
-
-**Mass Profile Example:**
-
-![Mass Profile](export/radial_profiles/plots/Mass/mass_profile_0.png)
-
-**Pressure Profile Example:**
-
-![Pressure Profile](export/radial_profiles/plots/Pressure/pressure_profile_0.png)
-
-### Phase-Resolved Internal Structure
-
-**NEW!** Radial profiles now track **all EOS columns** including phase transitions. Generate beautiful phase-color-coded plots at maximum mass:
-
-```bash
-# Find M_max and generate full internal structure profile
-tovx-radial --batch inputCode/Batch/ --max-mass -o export/radial_maxmass
-```
-
-**Example: RGNJL EOS with Hadronic → 2SC → CFL Phase Transitions**
-
-![Phase-Coded Radial Profiles](export/radial_plots/RGNJL_v0.70d1.45_radial_profiles.png)
-
-**Features:**
-- 🎨 **Phase color-coding**: Hadronic (blue), 2SC (orange), CFL (red)
-- 🔬 **Complete internal structure**: M(r), p(r), ε(r), n(r)
-- 💾 **HDF5 format**: Efficient binary storage (10-100x smaller than JSON)
-- 🎯 **Automatic M_max finding**: Precision < 0.01 M☉
-- ⚡ **10s timeout per star**: Never hangs on problematic configurations
-
 
 ---
 
@@ -380,8 +514,6 @@ export/radial_profiles/
 ### Performance Benefits
 
 - **Parallel Processing**: Uses all CPU cores by default (configurable with `--workers`)
-- **Time Savings**: ~45% faster with 2 workers, scales with more cores
-- **Robust Error Handling**: Individual file failures don't stop the batch
 - **Organized Output**: Each EOS gets its own folder (for radial profiles)
 
 ### Common Options
@@ -650,18 +782,20 @@ where k₂ is the second Love number, obtained by solving a coupled ODE system w
 
 #### Love Number k₂ Calculation
 
-The tidal perturbation is governed by:
+We solve a coupled 4-variable ODE system simultaneously with TOV:
 
 ```
-dy/dr = -(2/r)y - y² - y·F(r) + r²·Q(r)
-dH/dr = y
+dM/dr = 4πr²ε
+dp/dr = -(ε + p)(M + 4πr³p) / (r(r - 2M))
+dH/dr = β
+dβ/dr = (2H/F₁)[-2π(5ε + 9p + f(ε+p)) + 3/r² + (2/F₁)(M/r² + 4πrp)²] + (2β/rF₁)[-1 + M/r + 2πr²(ε-p)]
 ```
 
 where:
-- `y(r) = r·dH/dr / H(r)` is the logarithmic derivative
 - `H(r)` is the metric perturbation function
-- `F(r) = (1 - 2M(r)/r)⁻¹ · [2M(r)/r² + 4πr(p(r) - ε(r))]`
-- `Q(r) = (1 - 2M(r)/r)⁻¹ · [4π(5ε(r) + 9p(r) + (ε(r) + p(r))·(dε/dp)) - 6/r² - (2M(r)/r² + 4πr(p(r) - ε(r)))²]`
+- `β(r) = dH/dr` is integrated explicitly for numerical stability
+- `F₁ = 1 - 2M/r` is the metric factor
+- `f = dε/dp` is the EOS stiffness (precomputed using centered differences)
 
 The Love number k₂ is then extracted at the surface (r = R):
 
@@ -729,7 +863,6 @@ All calculations use **geometric units** where G = c = 1:
 
 - **ODE Integration:** `scipy.integrate.odeint` with rtol=1e-12, atol=1e-14
 - **EOS Interpolation:** Piecewise-linear
-- **Division-by-zero handling:** Small epsilon added to denominator (1e-30)
 - **Boundary conditions:** Start integration at r=1e-5 to avoid r=0 singularity
 
 ### Filtering
