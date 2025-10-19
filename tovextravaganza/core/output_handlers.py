@@ -117,14 +117,41 @@ class TidalWriter:
         
         # Write CSV (filter out unphysical stars at R_max and low mass)
         with open(out_csv, "w", encoding="utf-8") as f:
-            f.write("p_c,R,M_code,M_solar,Lambda,k2\n")
+            # Determine all columns dynamically
+            if results:
+                # Get all keys from first result
+                all_keys = list(results[0].keys())
+                
+                # Define standard columns in order
+                standard_cols = ['p_c', 'R', 'M_code', 'M_solar', 'Lambda', 'k2']
+                
+                # Find additional columns (those starting with 'central_')
+                central_cols = [k for k in all_keys if k.startswith('central_')]
+                
+                # Combine: standard first, then central columns
+                all_output_cols = standard_cols + central_cols
+                
+                # Write header
+                f.write(','.join(all_output_cols) + '\n')
+            else:
+                # Fallback if no results
+                f.write("p_c,R,M_code,M_solar,Lambda,k2\n")
+                all_output_cols = ['p_c', 'R', 'M_code', 'M_solar', 'Lambda', 'k2']
             
             count = 0
             for res in results:
                 # Skip stars that hit r_max (unphysical) or have very low mass
                 if res['R'] < 99.0 and res['M_solar'] > 0.05:
-                    f.write(f"{res['p_c']:.6e},{res['R']:.6e},{res['M_code']:.6e},"
-                           f"{res['M_solar']:.6e},{res['Lambda']:.6e},{res['k2']:.6e}\n")
+                    # Write values for all columns
+                    values = []
+                    for col in all_output_cols:
+                        val = res.get(col, '')
+                        # Format numeric values, keep strings as-is
+                        if isinstance(val, (int, float, np.number)):
+                            values.append(f"{val:.6e}")
+                        else:
+                            values.append(str(val))
+                    f.write(','.join(values) + '\n')
                     count += 1
         
         print(f"  Filtered: kept {count}/{len(results)} physical solutions (R < 99 km, M > 0.05 Msun)")

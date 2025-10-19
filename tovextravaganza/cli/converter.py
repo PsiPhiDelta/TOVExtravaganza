@@ -313,6 +313,51 @@ def process_batch_converter(args):
         print(f"No CSV files found in directory: {input_dir}")
         return
     
+    # Interactive prompts for missing parameters
+    if args.pcol is None:
+        print("\n** Which column contains PRESSURE? **")
+        print("(1-based indexing, e.g., 1 for first column, 2 for second, etc.)")
+        while True:
+            try:
+                args.pcol = int(input("Pressure column: "))
+                if args.pcol >= 1:
+                    break
+                print("Column must be >= 1")
+            except ValueError:
+                print("Please enter a valid integer")
+    
+    if args.ecol is None:
+        print("\n** Which column contains ENERGY DENSITY? **")
+        print("(1-based indexing)")
+        while True:
+            try:
+                args.ecol = int(input("Energy density column: "))
+                if args.ecol >= 1:
+                    break
+                print("Column must be >= 1")
+            except ValueError:
+                print("Please enter a valid integer")
+    
+    if args.system is None:
+        print("\n** What UNIT SYSTEM is your data in? **")
+        print("0) Already in code units")
+        print("1) MeV^-4")
+        print("2) MeV*fm^-3")
+        print("3) fm^-4")
+        print("4) CGS (dyn/cm^2, erg/cm^3)")
+        while True:
+            try:
+                args.system = int(input("Enter choice (0-4): "))
+                if 0 <= args.system <= 4:
+                    break
+                print("Choice must be 0-4")
+            except ValueError:
+                print("Please enter a valid integer")
+    
+    # Adjust output directory to preserve "Batch" subfolder if input is from Batch
+    if 'Batch' in str(input_dir) or 'batch' in str(input_dir).lower():
+        args.output = str(Path(args.output) / 'Batch')
+    
     print(f"\n{'='*70}")
     print(f"BATCH CONVERTER MODE - oh boy oh boy!")
     print(f"{'='*70}")
@@ -413,12 +458,12 @@ def main():
         )
         parser.add_argument('-b', '--batch', type=str, required=True,
                           help='Batch mode: process all CSV files in the specified directory')
-        parser.add_argument('-p', '--pcol', type=int, default=1,
-                          help='Pressure column (1-based, default: 1)')
-        parser.add_argument('-e', '--ecol', type=int, default=2,
-                          help='Energy density column (1-based, default: 2)')
-        parser.add_argument('-s', '--system', type=int, default=2, choices=[0, 1, 2, 3, 4],
-                          help='Unit system: 0=code, 1=MeV^-4, 2=MeV*fm^-3 (default), 3=fm^-4, 4=CGS')
+        parser.add_argument('-p', '--pcol', type=int, default=None,
+                          help='Pressure column (1-based, interactive prompt if not provided)')
+        parser.add_argument('-e', '--ecol', type=int, default=None,
+                          help='Energy density column (1-based, interactive prompt if not provided)')
+        parser.add_argument('-s', '--system', type=int, default=None, choices=[0, 1, 2, 3, 4],
+                          help='Unit system: 0=code, 1=MeV^-4, 2=MeV*fm^-3, 3=fm^-4, 4=CGS (interactive prompt if not provided)')
         parser.add_argument('-o', '--output', default='inputCode',
                           help='Output directory (default: inputCode)')
         parser.add_argument('--header', action='store_true', default=True,
