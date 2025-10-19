@@ -48,6 +48,12 @@ dev = [
     "pytest>=6.0",
     "pytest-cov>=2.0",
 ]
+hdf5 = [
+    "h5py>=3.0",
+]
+all = [
+    "h5py>=3.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/PsiPhiDelta/TOVExtravaganza"

@@ -200,6 +200,14 @@ Creates:
 
 ![Mass-Radius Plot](export/stars/plots/hsdd2.png)
 
+### Comparative M-R Curves
+
+**NEW!** Compare multiple EOS models on a single M-R diagram:
+
+![M-R Curves Comparison](export/all_mr_curves.png)
+
+*Overlay of 6 different EOS models showing quark matter phase transitions (CSC and RGNJL series). Solid lines: CSC models with color superconductivity; Dashed lines: RGNJL models with hadronic cores. Demonstrates range of predictions for maximum mass (1.94 - 2.19 M☉) and radius constraints.*
+
 ### Internal Structure Profiles
 
 Running `radial.py` reveals the **internal structure** from center to surface:
@@ -220,6 +228,26 @@ Each profile shows:
 **Pressure Profile Example:**
 
 ![Pressure Profile](export/radial_profiles/plots/Pressure/pressure_profile_0.png)
+
+### Phase-Resolved Internal Structure
+
+**NEW!** Radial profiles now track **all EOS columns** including phase transitions. Generate beautiful phase-color-coded plots at maximum mass:
+
+```bash
+# Find M_max and generate full internal structure profile
+tovx-radial --batch inputCode/Batch/ --max-mass -o export/radial_maxmass
+```
+
+**Example: RGNJL EOS with Hadronic → 2SC → CFL Phase Transitions**
+
+![Phase-Coded Radial Profiles](export/radial_plots/RGNJL_v0.70d1.45_radial_profiles.png)
+
+**Features:**
+- 🎨 **Phase color-coding**: Hadronic (blue), 2SC (orange), CFL (red)
+- 🔬 **Complete internal structure**: M(r), p(r), ε(r), n(r)
+- 💾 **HDF5 format**: Efficient binary storage (10-100x smaller than JSON)
+- 🎯 **Automatic M_max finding**: Precision < 0.01 M☉
+- ⚡ **10s timeout per star**: Never hangs on problematic configurations
 
 
 ---
@@ -413,6 +441,8 @@ python -m tovextravaganza.tov inputCode/hsdd2.csv \
     -o export/my_stars \                    # Custom output folder
     --dr 0.0001 \                           # Radial step size
     --rmax 50 \                             # Maximum radius
+    --rmax-plot 15 \                        # 🌟 NEW! Zoom M-R plot to R ≤ 15 km (default: 20)
+    --timeout 20 \                          # 🌟 NEW! Abort stars taking > 20s (default: 10s)
     --quiet \                               # Suppress progress messages
     --no-plot \                             # Skip plot generation
     --no-show                               # Don't display plot (still saves)
@@ -460,6 +490,9 @@ tovx-radial inputCode/hsdd2.csv -M 1.4          # Star closest to 1.4 M☉
 tovx-radial inputCode/hsdd2.csv -R 12.0         # Star closest to 12 km
 tovx-radial inputCode/hsdd2.csv -M 1.4 -M 2.0   # Multiple masses
 tovx-radial inputCode/hsdd2.csv -M 1.4 -R 12    # By mass AND radius
+
+# 🌟 NEW! Generate profile at maximum mass
+tovx-radial inputCode/hsdd2.csv --max-mass      # Finds M_max automatically (precision < 0.01 M☉)
 ```
 
 **From source:**
@@ -473,11 +506,37 @@ python -m tovextravaganza.radial inputCode/hsdd2.csv -M 1.4          # Star clos
 python -m tovextravaganza.radial inputCode/hsdd2.csv -R 12.0         # Star closest to 12 km
 python -m tovextravaganza.radial inputCode/hsdd2.csv -M 1.4 -M 2.0   # Multiple masses
 python -m tovextravaganza.radial inputCode/hsdd2.csv -M 1.4 -R 12    # By mass AND radius
+
+# 🌟 NEW! Generate profile at maximum mass
+python -m tovextravaganza.radial inputCode/hsdd2.csv --max-mass      # Finds M_max automatically (precision < 0.01 M☉)
+```
+
+#### Advanced Options
+
+**NEW features in v1.4.2+:**
+
+```bash
+# Control plot viewport (doesn't crop data)
+tovx-radial inputCode/hsdd2.csv --rmax-plot 15   # M-R diagrams show only R ≤ 15 km
+
+# Set timeout for stuck calculations
+tovx-radial inputCode/hsdd2.csv --timeout 20     # Abort stars taking > 20s (default: 10s)
+
+# Batch process all EOS files at M_max
+tovx-radial --batch inputCode/Batch/ --max-mass  # Parallel M_max profiles
 ```
 
 #### Output
 
-**JSON:** `export/radial_profiles/json/<eos_name>.json`
+**HDF5 (default):** `export/radial_profiles/json/<eos_name>.h5`  
+- **10-100x smaller** than JSON (binary + compression)
+- Fast read/write for large datasets
+- Standard scientific format (Python, MATLAB, Julia, R)
+- Requires: `pip install tovextravaganza[hdf5]` or `pip install h5py`
+
+**Fallback JSON:** `export/radial_profiles/json/<eos_name>.json`  
+- Used if h5py not installed
+- Human-readable but large files
 ```json
 {
   "stars": [

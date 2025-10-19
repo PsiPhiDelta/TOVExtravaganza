@@ -147,6 +147,11 @@ export/stars/plots/*
 !export/all_mr_curves.png
 !export/all_mr_curves.pdf
 
+# Keep phase-coded radial plots (NEW in v1.4.2+)
+!export/radial_plots/
+export/radial_plots/*
+!export/radial_plots/RGNJL_v0.70d1.45_radial_profiles.png
+
 # Keep first radial profile examples
 !export/radial_profiles/
 export/radial_profiles/*

@@ -277,7 +277,9 @@ class EOS:
     
     def get_string_value(self, colname, p):
         """
-        Get string value at given pressure (finds nearest point).
+        Get string value at given pressure (finds nearest point by ENERGY DENSITY).
+        Uses energy density instead of pressure because in first-order phase transitions,
+        pressure plateaus while energy density jumps - making energy more unique.
         
         Parameters:
         -----------
@@ -289,13 +291,17 @@ class EOS:
         Returns:
         --------
         str
-            String value at nearest pressure point
+            String value at nearest energy density point
         """
         if colname not in self.string_dict:
             raise ValueError(f"Column '{colname}' is not a string column")
         
-        # Find nearest pressure index
-        idx = np.argmin(np.abs(self.p_table - p))
+        # Get energy density at this pressure (interpolated)
+        e_at_p = self.get_energy_density(p)
+        
+        # Find nearest energy density index
+        e_table = self.data_dict['e']
+        idx = np.argmin(np.abs(e_table - e_at_p))
         return self.string_dict[colname][idx]
     
     def get_all_values_at_pressure(self, p):
