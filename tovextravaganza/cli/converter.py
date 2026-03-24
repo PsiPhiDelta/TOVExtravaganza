@@ -34,17 +34,17 @@ cMeVfm3gcm3 = 1.7826619069e12
 
 ###############################################################################
 # OH BOY OH BOY, NOW THE FACTORS:
-# (1) cMeVfm3km2/(hbarcMeVfm^3) => for MeV^-4 => code units => ~1.722898e-13
+# (1) cMeVfm3km2/(hbarcMeVfm^3) => for MeV^4 => code units => ~1.722898e-13
 # (2) cMeVfm3km2               => for MeV*fm^-3 => code units => ~1.323790e-06
-# (3) 'TODO' => fm^-4 => code
+# (3) fm^-4 => code, using (fm^-4) * (hbar*c in MeV*fm) => MeV*fm^-3
 # (4) For CGS, we do separate:
 #     pFactor = cMeVfm3km2/cMeVfm3dynecm2  ~8.262445e-40
 #     eFactor = cMeVfm3km2/cMeVfm3gcm3    ~7.425915e-19
 ###############################################################################
 
-factor_MeVneg4 = cMeVfm3km2 / (hbarcMeVfm**3)   # MeV^-4 => ~1.722898e-13
+factor_MeVneg4 = cMeVfm3km2 / (hbarcMeVfm**3)   # MeV^4 => ~1.722898e-13
 factor_MeVfm3  = 1.323790e-06                  # MeV*fm^-3 => ~1.323790e-06
-factor_fmneg4  = 1.323790e-06*(hbarcMeVfm)  # fm^-4 => 'TODO'
+factor_fmneg4  = 1.323790e-06*(hbarcMeVfm)  # fm^-4 => code
 pFactor_CGS    = cMeVfm3km2 / cMeVfm3dynecm2    # ~8.262445e-40
 eFactor_CGS    = cMeVfm3km2 / cMeVfm3gcm3       # ~7.425915e-19
 
@@ -73,9 +73,9 @@ class EOSConverter:
         oh boy oh boy, let's do it!
         """
         print("\n** Checking our derived factor expressions => TOV code units **\n")
-        print(f"(1) MeV^-4 => factor ~ {self.factor_MeVneg4:.6e} ( ~1.722898e-13 )")
+        print(f"(1) MeV^4 => factor ~ {self.factor_MeVneg4:.6e} ( ~1.722898e-13 )")
         print(f"(2) MeV*fm^-3 => factor ~ {self.factor_MeVfm3:.6e} ( ~1.323790e-06 )")
-        print(f"(3) fm^-4 => 'TODO' => factor ~ {self.factor_fmneg4:.6e} ( placeholder )")
+        print(f"(3) fm^-4 => factor ~ {self.factor_fmneg4:.6e} (via hbar*c)")
 
         print("\n(4) CGS => separate p,e factors => code units:")
         print(f"    p(dyn/cm^2) => pFactor= {self.pFactor_CGS:.6e} (~8.262445e-40)")
@@ -90,7 +90,7 @@ class EOSConverter:
         if choice == "0":
             return 1.0, 1.0, "Already code => factor=1"
         elif choice == "1":
-            return self.factor_MeVneg4, self.factor_MeVneg4, "MeV^-4 => code"
+            return self.factor_MeVneg4, self.factor_MeVneg4, "MeV^4 => code"
         elif choice == "2":
             return self.factor_MeVfm3, self.factor_MeVfm3, "MeV*fm^-3 => code"
         elif choice == "3":
@@ -341,7 +341,7 @@ def process_batch_converter(args):
     if args.system is None:
         print("\n** What UNIT SYSTEM is your data in? **")
         print("0) Already in code units")
-        print("1) MeV^-4")
+        print("1) MeV^4")
         print("2) MeV*fm^-3")
         print("3) fm^-4")
         print("4) CGS (dyn/cm^2, erg/cm^3)")
@@ -447,7 +447,7 @@ def main():
         input_file: filename in inputRaw/ (just the name, not full path)
         pcol: pressure column (1-based)
         ecol: energy column (1-based)  
-        system: 0-4 (0=code, 1=MeV^-4, 2=MeV*fm^-3, 3=fm^-4, 4=CGS)
+        system: 0-4 (0=code, 1=MeV^4, 2=MeV*fm^-3, 3=fm^-4, 4=CGS)
         output_file: optional output path (default: inputCode/<input_file>)
     """
     # Check for batch mode first (with argparse)
@@ -463,7 +463,7 @@ def main():
         parser.add_argument('-e', '--ecol', type=int, default=None,
                           help='Energy density column (1-based, interactive prompt if not provided)')
         parser.add_argument('-s', '--system', type=int, default=None, choices=[0, 1, 2, 3, 4],
-                          help='Unit system: 0=code, 1=MeV^-4, 2=MeV*fm^-3, 3=fm^-4, 4=CGS (interactive prompt if not provided)')
+                          help='Unit system: 0=code, 1=MeV^4, 2=MeV*fm^-3, 3=fm^-4, 4=CGS (interactive prompt if not provided)')
         parser.add_argument('-o', '--output', default='inputCode',
                           help='Output directory (default: inputCode)')
         parser.add_argument('--header', action='store_true', default=True,
@@ -561,9 +561,9 @@ def main():
         
         print("\nWe have 5 options for input system => final TOV code units:")
         print("  0) Already code units => factor=1")
-        print("  1) MeV^-4 => cMeVfm3km2/(hbarc^3) ~ 1.722898e-13")
+        print("  1) MeV^4 => cMeVfm3km2/(hbarc^3) ~ 1.722898e-13")
         print("  2) MeV*fm^-3 => cMeVfm3km2 ~ 1.323790e-06")
-        print("  3) fm^-4 => 'TODO' => ( I am lazy )")
+        print("  3) fm^-4 => cMeVfm3km2*(hbarc) ~ 2.612079e-04")
         print("  4) CGS => separate pFactor/eFactor => ~8.262445e-40 & ~7.425915e-19")
         
         choice = input("Which system (0..4)? ").strip()

@@ -4,6 +4,20 @@ All notable changes to TOV Extravaganza.
 
 ---
 
+## [1.5.3] - 2026-03-24
+
+### Fixed
+- **Converter Unit Labeling**
+  - Corrected user-facing unit representation from `MeV^-4` to `MeV^4` in converter menus, help text, and printed descriptions.
+  - Conversion factors and numeric behavior remain unchanged.
+
+### Improved
+- **Converter Messaging Cleanup**
+  - Replaced remaining `TODO`/placeholder text for the `fm^-4` path with explicit formula and finalized messaging.
+  - Clarified the displayed `fm^-4` conversion factor expression.
+
+---
+
 ## [1.5.2] - 2025-10-20
 
 ### Added
