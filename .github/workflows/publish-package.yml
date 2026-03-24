@@ -5,19 +5,22 @@ on:
     types: [published]
   workflow_dispatch:  # Allow manual trigger
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.x'
 
@@ -29,15 +32,19 @@ jobs:
     - name: Build package
       run: python -m build
 
-    - name: Publish to GitHub Packages
+    - name: Publish to PyPI
       env:
         TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
       run: |
-        twine upload --repository-url https://upload.pypi.org/legacy/ dist/* || echo "PyPI upload skipped or failed"
+        if [ -z "$TWINE_PASSWORD" ]; then
+          echo "PYPI_API_TOKEN is not set; skipping PyPI upload."
+          exit 0
+        fi
+        twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
         
     - name: Upload to GitHub Releases
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
