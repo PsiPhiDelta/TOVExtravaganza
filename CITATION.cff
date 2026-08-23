@@ -7,8 +7,8 @@ title: "TOVExtravaganza: Python toolkit for solving the Tolman-Oppenheimer-Volko
 license: MIT
 url: "https://github.com/PsiPhiDelta/TOVExtravaganza"
 repository-code: "https://github.com/PsiPhiDelta/TOVExtravaganza"
-version: 1.0.0
+version: 1.6.0
 identifiers:
   - type: arXiv
     value: "2411.04064"
-date-released: 2025-01-07
+date-released: 2026-08-23
