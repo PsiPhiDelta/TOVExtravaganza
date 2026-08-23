@@ -37,7 +37,7 @@ class TOVSolver:
         self.rtol = rtol
         self.atol = atol
     
-    def _tov_equations(self, y, r):
+    def _tov_equations(self, y, r, segment=None):
         """
         TOV differential equations in dimensionless code units.
         
@@ -47,6 +47,10 @@ class TOVSolver:
             [M, p] - mass and pressure
         r : float
             Radial coordinate
+        segment : int or None
+            Index of the single-phase EOS segment currently being integrated.
+            Only meaningful for a hybrid EOS, where eps(P) is double-valued at
+            the transition; None is correct for a single-phase table.
             
         Returns:
         --------
@@ -58,7 +62,7 @@ class TOVSolver:
         if p <= 0.0:
             return [0.0, 0.0]
         
-        e = self.eos.get_energy_density(p)
+        e = self.eos.get_energy_density(p, segment=segment)
         dMdr = 4.0 * np.pi * r * r * e
         
         # dp/dr = -(e+p)(M + 4πr³p) / [r(r-2M)]
@@ -72,6 +76,57 @@ class TOVSolver:
         
         return [dMdr, dpdr]
     
+    def _integrate_phases(self, r_vals, y0, central_p):
+        """
+        Integrate the TOV equations across a hybrid EOS, tracking which phase
+        the integrator is in.
+        
+        Pressure falls monotonically outward, so the star starts on whichever
+        branch contains the central pressure and drops one segment each time it
+        crosses a transition.  M and p are both continuous across a first-order
+        transition, so no matching condition is needed here -- the only thing
+        that changes is which branch eps(P) is read from.  (The tidal variables
+        are *not* continuous; see TidalCalculator.)
+        """
+        n = len(r_vals)
+        out = np.empty((n, 2))
+        state = np.asarray(y0, dtype=float)
+        seg = self.eos.segment_for_pressure(central_p)
+        i = 0
+        r_anchor = float(r_vals[0])
+
+        while i < n:
+            # odeint needs its first abscissa to be where `state` lives, which
+            # after a phase switch is the last grid point of the previous phase.
+            grid = r_vals[i:]
+            prepend = r_anchor < grid[0]
+            t = np.concatenate(([r_anchor], grid)) if prepend else grid
+            sub = odeint(self._tov_equations, state, t, args=(seg,),
+                         rtol=self.rtol, atol=self.atol)
+            if prepend:
+                sub = sub[1:]
+
+            if seg == 0:
+                out[i:] = sub
+                break
+
+            p_tr = self.eos.transitions[seg - 1]["p_tr"]
+            below = np.where(sub[:, 1] < p_tr)[0]
+            if len(below) == 0:
+                out[i:] = sub
+                break
+
+            # Hand over to the next phase down at the last point still above P_tr
+            j = int(below[0])
+            out[i:i + j] = sub[:j]
+            if j > 0:
+                state = sub[j - 1].copy()
+                r_anchor = float(grid[j - 1])
+            i += j
+            seg -= 1
+
+        return out
+
     def solve(self, central_p, return_profile=False):
         """
         Solve TOV equations for given central pressure.
@@ -99,8 +154,11 @@ class TOVSolver:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             try:
-                sol = odeint(self._tov_equations, y0, r_vals,
-                           rtol=self.rtol, atol=self.atol)
+                if self.eos.transitions:
+                    sol = self._integrate_phases(r_vals, y0, central_p)
+                else:
+                    sol = odeint(self._tov_equations, y0, r_vals,
+                               rtol=self.rtol, atol=self.atol)
                 if w:
                     for warning in w:
                         print(f"  ODE Warning (p_c={central_p:.3e}): {warning.message}")

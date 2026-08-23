@@ -4,6 +4,80 @@ All notable changes to TOV Extravaganza.
 
 ---
 
+## [1.6.0] - 2026-08-23
+
+### Added
+- **Hybrid EOS support (first-order phase transitions)** ⚛️
+  - `EOS` now splits a table into single-phase **segments** at each first-order
+    transition. `get_value()`, `get_energy_density()`, `get_fdedp()`,
+    `get_string_value()` and `get_all_values_at_pressure()` take an optional
+    `segment=` argument and clamp at segment edges, so a caller always gets the
+    branch it asked for.
+  - New `EOS.transitions`, `EOS.segments`, `EOS.n_segments()`,
+    `EOS.segment_for_pressure()` and `EOS.segment_pressure_range()`.
+  - New `EOS(..., transition_pressures=[...])` to declare transition pressures
+    explicitly instead of relying on auto-detection — the robust option when you
+    built the Maxwell construction yourself and already know `P_tr`.
+  - `TOVSolver` and `TidalCalculator` track which phase they are in as they
+    integrate outward, stepping down one segment at each crossing.
+- **Regression tests** under `tests/`, plus a hybrid fixture
+  (`tests/data/hybrid_dd2_csc.csv`, DD2 ↔ toy CSC quark by Maxwell
+  construction) and the script that generates it. Runs under pytest or
+  standalone: `python3 tests/test_hybrid_eos.py`.
+
+### Fixed
+- **Missing `y` matching condition at a first-order transition (tidal)**
+  - `H` and `beta` were integrated continuously in `r`. In a Maxwell
+    construction `eps` jumps at *constant* `P`, so `de/dp` is a delta function
+    with no width for the stepper to resolve; the discontinuity has to enter as
+    an explicit matching condition on `y = r H'/H`:
+
+        y(r_d^+) = y(r_d^-) - 4 pi r_d^3 Delta_eps / (m(r_d) + 4 pi r_d^3 p(r_d))
+
+    (Damour & Nagar 2009; Postnikov, Prakash & Lattimer 2010;
+    Takatsy & Kovacs 2020.) Implemented in
+    `TidalCalculator._apply_transition_jump()`, driven by
+    `_integrate_with_jumps()`, which locates `r_d`, steps exactly onto it,
+    shifts `beta`, and resumes on the branch below.
+  - Omitting it biases `Lambda` **low** for hybrid stars — up to ~9% on the test
+    fixture, growing with quark-core size.
+- **`de/dp` contaminated across the transition**
+  - `_precompute_fdedp()` took centered differences straddling the plateau,
+    dividing a finite `de` by a vanishing `dp`. On the test fixture that put
+    `de/dp` = 44 and 8395 on the two plateau rows (neighbours ≈3.5 and ≈3.8),
+    which linear interpolation then smeared over the adjacent intervals — a
+    spurious, table-resolution-dependent contribution. Differences are now taken
+    strictly within one phase. The two ends of the *table* keep the original
+    convention, so single-phase results are unchanged.
+- **Non-deterministic loading of a Maxwell plateau**
+  - `np.argsort` defaults to quicksort, which is not stable, so the two rows
+    sharing one pressure were ordered arbitrarily — the same physics in a
+    slightly longer table could load with the phases swapped. Now sorted with
+    `kind="stable"`, and every plateau is additionally forced into
+    ascending-energy order, so the result no longer depends on how the file
+    happened to be written.
+- **Silent failure on a near-degenerate plateau**
+  - A plateau written with a tiny but nonzero pressure step (`dp/p = 1e-12`, as
+    a finite-precision table round-trip produces) previously returned
+    `M = 0, Lambda = 0` without an error. Now handled like an exact plateau.
+
+### Changed
+- **Transition auto-detection is relative-thresholded**
+  - Requires both `dp/p <= 1e-6` and `de/e > 1e-3` (`EOS.TRANSITION_REL_DP` /
+    `TRANSITION_REL_DE`, overridable per instance). An *absolute* `dp` threshold
+    fires on ordinary outer-crust table steps, where `dp` is small only because
+    the pressure itself is. All EOS files shipped with the package detect zero
+    transitions; the smallest legitimate `dp/p` among them is 9e-5.
+
+### Unchanged
+- Single-phase results are **byte-identical** to 1.5.3 (`hsdd2.csv`, `csc.csv`,
+  `test.csv`, all six `Batch/` files). DD2 reference: `M_max` 2.4228 Msun,
+  `R(1.4)` 13.2347 km, `Lambda(1.4)` ~703-710 depending on sampling.
+  Note `Lambda ~ M^-6`, so interpolate a sequence in `log Lambda` and use >= 200
+  central pressures.
+
+---
+
 ## [1.5.3] - 2026-03-24
 
 ### Fixed
