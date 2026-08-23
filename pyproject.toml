@@ -74,5 +74,8 @@ tovx-demo = "tovextravaganza.utils.demo:main"
 tovextravaganza = "tovextravaganza.utils.help_command:main"
 
 [tool.setuptools]
-packages = {find = {}}  # Automatically discover all packages
+# Namespace discovery, so the inputCode/inputRaw CSV trees ship as data for
+# tovx-demo. tests/ must be excluded or it installs as a top-level `tests`
+# package and can shadow other projects' modules.
+packages = {find = {exclude = ["tests*"]}}
 

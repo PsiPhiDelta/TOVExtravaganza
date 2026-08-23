@@ -28,7 +28,7 @@ setup(
         'arXiv Paper': 'https://arxiv.org/abs/2411.04064',
         'Cite': 'https://github.com/PsiPhiDelta/TOVExtravaganza/blob/main/CITATION.cff',
     },
-    packages=find_packages(),
+    packages=find_packages(exclude=['tests', 'tests.*']),
     package_data={
         'tovextravaganza': [
             '../inputCode/*.csv',
